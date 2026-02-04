@@ -1,5 +1,4 @@
-local moveevent = MoveEvent()
-function moveevent.onStepOut(creature, item, position, fromPosition)
+function onStepOut(creature, item, position, fromPosition)
 	local tile = Tile(position)
 	if tile:getCreatureCount() > 0 then return true end
 
@@ -29,6 +28,3 @@ function moveevent.onStepOut(creature, item, position, fromPosition)
 	item:transform(item.itemid - 1)
 	return true
 end
-moveevent:type("stepout")
-moveevent:id(1224, 1226, 1228, 1230, 1242, 1244, 1246, 1248, 1256, 1258, 1260, 1262, 3541, 3543, 3550, 3552, 5104, 5106, 5113, 5115, 5122, 5124, 5131, 5133, 5289, 5291, 5293, 5295, 5746, 5749, 6203, 6205, 6207, 6209, 6260, 6262, 6264, 6266, 6897, 6899, 6906, 6908, 7039, 7041, 7048, 7050, 8552, 8554, 8556, 8558, 9176, 9178, 9180, 9182, 9278, 9280, 9282, 9284, 10279, 10281, 10283, 10285, 10474, 10476, 10483, 10485, 10781, 10783, 10790, 10792, 12096, 12098, 12103, 12105, 12194, 12196, 12203, 12205)
-moveevent:register()

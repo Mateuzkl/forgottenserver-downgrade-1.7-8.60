@@ -76,7 +76,13 @@ bool ScriptingManager::loadScriptSystems()
 	g_spells = new Spells();
 	g_actions = new Actions();
 	g_talkActions = new TalkActions();
+
 	g_moveEvents = new MoveEvents();
+	if (!g_moveEvents->loadFromXml()) {
+		std::cout << "> ERROR: Unable to load move events!" << std::endl;
+		return false;
+	}
+
 	g_creatureEvents = new CreatureEvents();
 	g_globalEvents = new GlobalEvents();
 
