@@ -182,8 +182,19 @@ void mainLoader(ServiceManager* services)
 		return;
 	}
 
+	LOG_INFO(">> Loading monsters");
+	if (!g_monsters.loadFromXml()) {
+		startupErrorMessage("Unable to load monsters!");
+		return;
+	}
 	LOG_INFO(fmt::format(">> Loading monsters... count: {}", g_monsters.monsters.size()));
-	
+
+	LOG_INFO(">> Loading lua monsters");
+	if (!g_scripts->loadScripts("data/monsters", false, false)) {
+		startupErrorMessage("Failed to load lua monsters");
+		return;
+	}
+
 	LOG_INFO(">> Loading outfits");
 	if (!Outfits::getInstance().loadFromXml()) {
 		startupErrorMessage("Unable to load outfits!");
