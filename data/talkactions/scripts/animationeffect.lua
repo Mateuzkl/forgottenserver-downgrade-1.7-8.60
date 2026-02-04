@@ -1,10 +1,4 @@
-<<<<<<<< HEAD:data/scripts/talkactions/god/animationeffect.lua
-local talkaction = TalkAction("/x")
-
-function talkaction.onSay(player, words, param)
-========
 function onSay(player, words, param)
->>>>>>>> parent of c6cb387 (Move XML to Talkactions Revscripts):data/talkactions/scripts/animationeffect.lua
 	local effect = tonumber(param)
 	local position = player:getPosition()
 	local toPositionLow = {z = position.z}

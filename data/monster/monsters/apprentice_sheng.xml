@@ -5,6 +5,7 @@
 	<targetchange interval="5000" chance="8" />
 	<flags>
 		<flag isboss="1" />
+		<flag isrewardboss="1" />
 		<flag pushable="0" />
 		<flag canpushitems="1" />
 		<flag canpushcreatures="1" />

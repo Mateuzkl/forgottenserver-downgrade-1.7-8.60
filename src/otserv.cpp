@@ -190,7 +190,7 @@ void mainLoader(ServiceManager* services)
 	LOG_INFO(fmt::format(">> Loading monsters... count: {}", g_monsters.monsters.size()));
 
 	LOG_INFO(">> Loading lua monsters");
-	if (!g_scripts->loadScripts("data/monsters", false, false)) {
+	if (!g_scripts->loadScripts("monster", false, false)) {
 		startupErrorMessage("Failed to load lua monsters");
 		return;
 	}
