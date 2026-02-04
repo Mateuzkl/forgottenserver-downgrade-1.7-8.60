@@ -5391,6 +5391,7 @@ bool Game::reload(ReloadTypes_t reloadType)
 	switch (reloadType) {
 		case RELOAD_TYPE_ACTIONS: {
 			bool result = g_actions->reload();
+			g_scripts->loadScripts("scripts/actions", false, true);
 			if (result) LOG_INFO("Actions reloaded successfully.");
 			return result;
 		}
@@ -5406,6 +5407,7 @@ bool Game::reload(ReloadTypes_t reloadType)
 		}
 		case RELOAD_TYPE_CREATURESCRIPTS: {
 			g_creatureEvents->reload();
+			g_scripts->loadScripts("scripts/creaturescripts", false, true);
 			g_creatureEvents->removeInvalidEvents();
 			LOG_INFO("CreatureScripts reloaded successfully.");
 			return true;
@@ -5417,6 +5419,7 @@ bool Game::reload(ReloadTypes_t reloadType)
 		}
 		case RELOAD_TYPE_GLOBALEVENTS: {
 			bool result = g_globalEvents->reload();
+			g_scripts->loadScripts("scripts/globalevents", false, true);
 			if (result) LOG_INFO("GlobalEvents reloaded successfully.");
 			return result;
 		}
@@ -5438,6 +5441,7 @@ bool Game::reload(ReloadTypes_t reloadType)
 		}
 		case RELOAD_TYPE_MOVEMENTS: {
 			bool result = g_moveEvents->reload();
+			g_scripts->loadScripts("scripts/movements", false, true);
 			if (result) LOG_INFO("Movements reloaded successfully.");
 			return result;
 		}
@@ -5462,12 +5466,14 @@ bool Game::reload(ReloadTypes_t reloadType)
 
 		case RELOAD_TYPE_TALKACTIONS: {
 			bool result = g_talkActions->reload();
+			g_scripts->loadScripts("scripts/talkactions", false, true);
 			if (result) LOG_INFO("TalkActions reloaded successfully.");
 			return result;
 		}
 
 		case RELOAD_TYPE_WEAPONS: {
 			bool result = g_weapons->reload();
+			g_scripts->loadScripts("scripts/weapons", false, true);
 			g_weapons->loadDefaults();
 			if (result) LOG_INFO("Weapons reloaded successfully.");
 			return result;
