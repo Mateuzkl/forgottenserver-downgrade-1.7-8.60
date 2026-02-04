@@ -73,7 +73,7 @@ bool ScriptingManager::loadScriptSystems()
 
 	g_weapons = new Weapons();
 	if (!g_weapons->loadFromXml()) {
-		std::cout << "> ERROR: Unable to load weapons!" << std::endl;
+		LOG_ERROR("> ERROR: Unable to load weapons!");
 		return false;
 	}
 
