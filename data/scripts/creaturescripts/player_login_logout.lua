@@ -1,8 +1,22 @@
 local loginMessage = CreatureEvent("loginMessage")
 
+local function convertIp(int)
+    if not int then return "0.0.0.0" end
+    local b1 = int % 256
+    local b2 = math.floor(int / 256) % 256
+    local b3 = math.floor(int / 65536) % 256
+    local b4 = math.floor(int / 16777216) % 256
+    return string.format("%d.%d.%d.%d", b1, b2, b3, b4)
+end
+
 function loginMessage.onLogin(player)
-	print(string.format("\27[32m%s%s\27[0m", player:getName(),
-	                       " has logged in."))
+    local prevColor = logger.colors.green
+    local resetColor = logger.colors.reset
+    local ipStr = convertIp(player:getIp())
+    local vocation = player:getVocation():getName()
+    local level = player:getLevel()
+    
+    logger.info("%s%s has logged in.%s [Lvl: %d] [Voc: %s] [IP: %s]", prevColor, player:getName(), resetColor, level, vocation, ipStr)
 
 	-- Notify player about the rewards in their reward chest
 	local rewardChest = player:getRewardChest()
@@ -58,8 +72,13 @@ loginMessage:register()
 local logoutMessage = CreatureEvent("logoutMessage")
 
 function logoutMessage.onLogout(player)
-	print(string.format("\27[31m%s%s\27[0m", player:getName(),
-	                       " has logged out."))
+    local prevColor = logger.colors.green
+    local resetColor = logger.colors.reset
+    local ipStr = convertIp(player:getIp())
+    local vocation = player:getVocation():getName()
+    local level = player:getLevel()
+
+	logger.info("%s%s has logged out.%s [Lvl: %d] [Voc: %s] [IP: %s]", prevColor, player:getName(), resetColor, level, vocation, ipStr)
 	return true
 end
 
