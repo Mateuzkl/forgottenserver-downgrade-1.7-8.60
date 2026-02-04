@@ -77,31 +77,31 @@ bool ScriptingManager::loadScriptSystems()
 
 	g_actions = new Actions();
 	if (!g_actions->loadFromXml()) {
-		std::cout << "> ERROR: Unable to load actions!" << std::endl;
+		LOG_ERROR("> ERROR: Unable to load actions!");
 		return false;
 	}
 
 	g_talkActions = new TalkActions();
 	if (!g_talkActions->loadFromXml()) {
-		std::cout << "> ERROR: Unable to load talk actions!" << std::endl;
+		LOG_ERROR("> ERROR: Unable to load talk actions!");
 		return false;
 	}
 
 	g_moveEvents = new MoveEvents();
 	if (!g_moveEvents->loadFromXml()) {
-		std::cout << "> ERROR: Unable to load move events!" << std::endl;
+		LOG_ERROR("> ERROR: Unable to load move events!");
 		return false;
 	}
 
 	g_creatureEvents = new CreatureEvents();
 	if (!g_creatureEvents->loadFromXml()) {
-		std::cout << "> ERROR: Unable to load creature events!" << std::endl;
+		LOG_ERROR("> ERROR: Unable to load creature events!");
 		return false;
 	}
 
 	g_globalEvents = new GlobalEvents();
 	if (!g_globalEvents->loadFromXml()) {
-		std::cout << "> ERROR: Unable to load global events!" << std::endl;
+		LOG_ERROR("> ERROR: Unable to load global events!");
 		return false;
 	}
 
