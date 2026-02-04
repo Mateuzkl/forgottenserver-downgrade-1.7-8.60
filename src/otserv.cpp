@@ -187,7 +187,6 @@ void mainLoader(ServiceManager* services)
 		startupErrorMessage("Unable to load monsters!");
 		return;
 	}
-	LOG_INFO(fmt::format(">> Loading monsters... count: {}", g_monsters.monsters.size()));
 
 	LOG_INFO(">> Loading lua monsters");
 	if (!g_scripts->loadScripts("monster", false, false)) {
