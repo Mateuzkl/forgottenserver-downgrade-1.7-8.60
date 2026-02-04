@@ -75,7 +75,12 @@ bool ScriptingManager::loadScriptSystems()
 	g_weapons->loadDefaults();
 	g_spells = new Spells();
 	g_actions = new Actions();
+
 	g_talkActions = new TalkActions();
+	if (!g_talkActions->loadFromXml()) {
+		std::cout << "> ERROR: Unable to load talk actions!" << std::endl;
+		return false;
+	}
 
 	g_moveEvents = new MoveEvents();
 	if (!g_moveEvents->loadFromXml()) {
