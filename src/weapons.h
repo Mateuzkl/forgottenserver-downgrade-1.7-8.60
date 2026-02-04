@@ -226,10 +226,8 @@ public:
 	CombatType_t getElementType() const override { return COMBAT_NONE; }
 
 	void setMinChange(int32_t change) { minChange = change; }
-	int32_t getMinChange() const { return minChange; }
 
 	void setMaxChange(int32_t change) { maxChange = change; }
-	int32_t getMaxChange() const { return maxChange; }
 
 private:
 	bool getSkillType(const Player*, const Item*, skills_t&, uint32_t&) const override { return false; }

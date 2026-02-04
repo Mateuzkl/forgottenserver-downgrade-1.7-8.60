@@ -162,21 +162,6 @@ NEW_LUA_DATA_TYPE(MoveEvent)
 NEW_LUA_DATA_TYPE(GlobalEvent)
 NEW_LUA_DATA_TYPE(Weapon)
 
-template <>
-inline constexpr LuaDataType LuaDataTypeByClass<WeaponMelee> = LuaData_Weapon;
-template <>
-inline constexpr LuaDataType LuaDataTypeByClass<const WeaponMelee> = LuaData_Weapon;
-
-template <>
-inline constexpr LuaDataType LuaDataTypeByClass<WeaponDistance> = LuaData_Weapon;
-template <>
-inline constexpr LuaDataType LuaDataTypeByClass<const WeaponDistance> = LuaData_Weapon;
-
-template <>
-inline constexpr LuaDataType LuaDataTypeByClass<WeaponWand> = LuaData_Weapon;
-template <>
-inline constexpr LuaDataType LuaDataTypeByClass<const WeaponWand> = LuaData_Weapon;
-
 NEW_LUA_DATA_TYPE(XMLDocument)
 NEW_LUA_DATA_TYPE(XMLNode)
 
