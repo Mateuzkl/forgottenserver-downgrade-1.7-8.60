@@ -58,6 +58,13 @@ function loginMessage.onLogin(player)
         player:setExperienceRate(ExperienceRateType.STAMINA, reductionMultiplier)
     end
 
+    -- Events
+    player:registerEvent("PlayerDeath")
+    player:registerEvent("DropLoot")
+
+    -- Update Experience Rate Stamina
+    player:updateStamina()
+
     if player:isTokenProtected() then
         player:setTokenLocked(true)
         player:popupFYI("=== TOKEN PROTECTION ===\n\nYour account is protected by TOKEN.\n\nYou cannot move or drop items until you unlock.\n\nType: !token <your_password>\n\nto unlock your character.")
@@ -72,14 +79,19 @@ loginMessage:register()
 local logoutMessage = CreatureEvent("logoutMessage")
 
 function logoutMessage.onLogout(player)
-    local prevColor = logger.colors.green
+    local prevColor = logger.colors.red
     local resetColor = logger.colors.reset
     local ipStr = convertIp(player:getIp())
     local vocation = player:getVocation():getName()
     local level = player:getLevel()
 
-	logger.info("%s%s has logged out.%s [Lvl: %d] [Voc: %s] [IP: %s]", prevColor, player:getName(), resetColor, level, vocation, ipStr)
-	return true
+    logger.info("%s%s has logged out.%s [Lvl: %d] [Voc: %s] [IP: %s]", prevColor, player:getName(), resetColor, level, vocation, ipStr)
+    
+    local playerId = player:getId()
+    if nextUseStaminaTime[playerId] then
+        nextUseStaminaTime[playerId] = nil
+    end
+    return true
 end
 
 logoutMessage:register()
