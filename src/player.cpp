@@ -63,14 +63,66 @@ Player::~Player()
 	setEditHouse(nullptr);
 }
 
+void Player::addSpectator(ProtocolSpectator* spectator) {
+	spectators.push_back(spectator);
+	spectatorCount++;
+	
+	std::ostringstream query;
+	query << "UPDATE `players_online` SET `cast_spectators` = '" << spectatorCount << "' WHERE `player_id` = '" << getGUID() << "';";
+	Database::getInstance().executeQuery(query.str());
+}
+
+void Player::removeSpectator(ProtocolSpectator* spectator) {
+	auto it = std::find(spectators.begin(), spectators.end(), spectator);
+	if (it == spectators.end()) {
+		return;
+	}
+
+	spectators.erase(it);
+	spectatorCount--;
+	
+	std::ostringstream query;
+	query << "UPDATE `players_online` SET `cast_spectators` = '" << spectatorCount << "' WHERE `player_id` = '" << getGUID() << "';";
+	Database::getInstance().executeQuery(query.str());
+}
+
+bool Player::startLiveCasting(const std::string& password) {
+	liveCasting = true;
+
+	castPassword = password;
+
+	sendChannel(CHANNEL_CAST, "Live Cast");
+
+	Database& db = Database::getInstance();
+
+	std::ostringstream query;
+	query << "UPDATE `players_online` SET `cast_password` = " << db.escapeString(password) << " WHERE `player_id` = " << getGUID() << ";";
+	db.executeQuery(query.str());
+
+	g_game.addLiveCaster(this);
+
+	if (getBoolean(ConfigManager::CAST_EXP_BONUS)) {
+		if (castPassword.empty() && !castExpBonusActive) {
+			castExpBonusActive = true;
+			int32_t bonusPercent = getInteger(ConfigManager::CAST_EXP_BONUS_PERCENT);
+			std::string msg = fmt::format("You received +{}% experience bonus for casting. Good luck!", bonusPercent);
+			if (client) {
+				client->sendTextMessage(TextMessage(MESSAGE_STATUS_CONSOLE_BLUE, msg), false);
+			}
+		} else if (!castPassword.empty() && castExpBonusActive) {
+			castExpBonusActive = false;
+			if (client) {
+				client->sendTextMessage(TextMessage(MESSAGE_STATUS_CONSOLE_BLUE, "Experience bonus removed."), false);
+			}
+		}
+	}
+
+	return isLiveCasting();
+}
+
 bool Player::stopLiveCasting() {
 	liveCasting = false;
 	castPassword = "";
-	
-	if (castExpBonusActive) {
-		castExpBonusActive = false;
-		sendTextMessage(MESSAGE_STATUS_CONSOLE_BLUE, "[Cast] Experience bonus removed.");
-	}
 
 	std::vector<ProtocolSpectator*> spectatorsCopy = spectators;
 	for(ProtocolSpectator* spectator : spectatorsCopy) {
@@ -88,67 +140,6 @@ bool Player::stopLiveCasting() {
 	g_game.removeLiveCaster(this);
 
 	return isLiveCasting() == false;
-}
-
-void Player::addSpectator(ProtocolSpectator* spectator) {
-	bool wasEmpty = spectators.empty();
-	spectators.push_back(spectator);
-	spectatorCount++;
-	
-	std::ostringstream query;
-	query << "UPDATE `players_online` SET `cast_spectators` = '" << spectatorCount << "' WHERE `player_id` = '" << getGUID() << "';";
-	Database::getInstance().executeQuery(query.str());
-	
-	if (wasEmpty && getBoolean(ConfigManager::CAST_EXP_BONUS) && !castExpBonusActive) {
-		castExpBonusActive = true;
-		int32_t bonusPercent = getInteger(ConfigManager::CAST_EXP_BONUS_PERCENT);
-		std::stringstream ss;
-		ss << "You received +" << bonusPercent << "% experience bonus for casting. Good luck!";
-		if (client) {
-			client->sendTextMessage(TextMessage(MESSAGE_STATUS_CONSOLE_BLUE, ss.str()), false);
-		}
-	}
-}
-
-void Player::removeSpectator(ProtocolSpectator* spectator) {
-	auto it = std::find(spectators.begin(), spectators.end(), spectator);
-	if (it == spectators.end()) {
-		return;
-	}
-
-	spectators.erase(it);
-	spectatorCount--;
-	
-	std::ostringstream query;
-	query << "UPDATE `players_online` SET `cast_spectators` = '" << spectatorCount << "' WHERE `player_id` = '" << getGUID() << "';";
-	Database::getInstance().executeQuery(query.str());
-	
-	if (spectators.empty() && castExpBonusActive) {
-		castExpBonusActive = false;
-		if (client) {
-			client->sendTextMessage(TextMessage(MESSAGE_STATUS_CONSOLE_BLUE, "Experience bonus removed."), false);
-		}
-	}
-}
-
-bool Player::startLiveCasting(const std::string& password) {
-	liveCasting = true;
-
-	if(!password.empty()) {
-		castPassword = password;
-	}
-
-	sendChannel(CHANNEL_CAST, "Live Cast");
-
-	Database& db = Database::getInstance();
-
-	std::ostringstream query;
-	query << "UPDATE `players_online` SET `cast_password` = " << db.escapeString(password) << " WHERE `player_id` = " << getGUID() << ";";
-	db.executeQuery(query.str());
-
-	g_game.addLiveCaster(this);
-
-	return isLiveCasting();
 }
 
 bool Player::setVocation(uint16_t vocId)
