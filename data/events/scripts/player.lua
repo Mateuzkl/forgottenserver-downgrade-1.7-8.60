@@ -80,8 +80,8 @@ function Player:onTradeCompleted(target, item, targetItem, isSuccess)
 	if hasEvent.onTradeCompleted then Event.onTradeCompleted(self, target, item, targetItem, isSuccess) end
 end
 
-function Player:onGainExperience(source, exp, rawExp)
-	return hasEvent.onGainExperience and math.floor(Event.onGainExperience(self, source, exp, rawExp)) or exp
+function Player:onGainExperience(source, exp, rawExp, sendText)
+	return hasEvent.onGainExperience and math.floor(Event.onGainExperience(self, source, exp, rawExp, sendText)) or exp
 end
 
 function Player:onLoseExperience(exp)
@@ -108,7 +108,7 @@ function Player:onNetworkMessage(recvByte, msg)
 	local handler = PacketHandlers[recvByte]
 	if not handler then
 		--print(string.format("Player: %s sent an unknown packet header: 0x%02X with %d bytes!",
-			--self:getName(), recvByte, msg:len()))
+		--self:getName(), recvByte, msg:len()))
 		return
 	end
 
@@ -133,8 +133,8 @@ function Player:onSpellCheck(spell)
 end
 
 function Player:onStepTile(fromPosition, toPosition)
-    if hasEvent.onStepTile then
-        return Event.onStepTile(self, fromPosition, toPosition)
-    end
-    return true
+	if hasEvent.onStepTile then
+		return Event.onStepTile(self, fromPosition, toPosition)
+	end
+	return true
 end
