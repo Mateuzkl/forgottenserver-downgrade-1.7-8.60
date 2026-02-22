@@ -9,12 +9,12 @@
 #include "chat.h"
 #include "events.h"
 #include "globalevent.h"
+#include "logger.h"
 #include "movement.h"
 #include "script.h"
 #include "spells.h"
 #include "talkaction.h"
 #include "weapons.h"
-#include "logger.h"
 
 Actions* g_actions = nullptr;
 CreatureEvents* g_creatureEvents = nullptr;
@@ -76,9 +76,12 @@ bool ScriptingManager::loadScriptSystems()
 		LOG_ERROR("> ERROR: Unable to load weapons!");
 		return false;
 	}
-
 	g_weapons->loadDefaults();
 	g_spells = new Spells();
+	if (!g_spells->loadFromXml()) {
+		LOG_ERROR("> ERROR: Unable to load spells!");
+		return false;
+	}
 
 	g_actions = new Actions();
 	if (!g_actions->loadFromXml()) {

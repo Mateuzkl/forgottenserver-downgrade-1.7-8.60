@@ -250,7 +250,7 @@ public:
 					if (!propStream.read<int64_t>(tmp)) {
 						return false;
 					}
-					value = tmp;
+					value = VariantAttribute(tmp);
 					break;
 				}
 
@@ -259,7 +259,7 @@ public:
 					if (!propStream.read<double>(tmp)) {
 						return false;
 					}
-					value = tmp;
+					value = VariantAttribute(tmp);
 					break;
 				}
 
@@ -268,7 +268,7 @@ public:
 					if (!propStream.read<bool>(tmp)) {
 						return false;
 					}
-					value = tmp;
+					value = VariantAttribute(tmp);
 					break;
 				}
 

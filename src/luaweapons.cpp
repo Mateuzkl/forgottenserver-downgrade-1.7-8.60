@@ -116,6 +116,7 @@ int luaWeaponRegister(lua_State* L)
 		}
 
 		weapon->configureWeapon(it);
+		
 		pushBoolean(L, g_weapons->registerLuaEvent(weapon));
 		*weaponPtr = nullptr;
 	} else {

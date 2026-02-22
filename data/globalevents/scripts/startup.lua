@@ -1,8 +1,4 @@
 function onStartup()
-    logInfo(">> Loading map attributes")
-    logInfo(">> Loaded " .. Game.getNpcCount() .. " npcs and spawned " .. Game.getMonsterCount() .. " monsters")
-    logInfo(">> Loaded " .. #Game.getTowns() .. " towns with " .. #Game.getHouses() .. " houses in total")
-
     -- Sign table
     -- loadLuaMapSign(SignTable)
     -- logInfo("Loaded " .. (#SignTable) .. " signs in the map")
@@ -79,7 +75,8 @@ function onStartup()
     db.asyncQuery("DELETE FROM `ip_bans` WHERE `expires_at` != 0 AND `expires_at` <= " .. os.time())
 
     -- Account bans cleanup
-    local resultId = db.storeQuery("SELECT * FROM `account_bans` WHERE `expires_at` != 0 AND `expires_at` <= " .. os.time())
+    local resultId = db.storeQuery("SELECT * FROM `account_bans` WHERE `expires_at` != 0 AND `expires_at` <= " ..
+    os.time())
     if resultId ~= false then
         repeat
             local accountId = result.getNumber(resultId, "account_id")
@@ -108,10 +105,13 @@ function onStartup()
                 local balance = result.getNumber(resultId, "balance")
                 local lastBid = result.getNumber(resultId, "last_bid")
                 if balance >= lastBid then
-                    db.query("UPDATE `players` SET `balance` = " .. (balance - lastBid) .. " WHERE `id` = " .. highestBidder)
+                    db.query("UPDATE `players` SET `balance` = " ..
+                    (balance - lastBid) .. " WHERE `id` = " .. highestBidder)
                     house:setOwnerGuid(highestBidder)
                 end
-                db.asyncQuery("UPDATE `houses` SET `last_bid` = 0, `bid_end` = 0, `highest_bidder` = 0, `bid` = 0 WHERE `id` = " .. house:getId())
+                db.asyncQuery(
+                "UPDATE `houses` SET `last_bid` = 0, `bid_end` = 0, `highest_bidder` = 0, `bid` = 0 WHERE `id` = " ..
+                house:getId())
             end
         until not result.next(resultId)
         result.free(resultId)
@@ -130,7 +130,7 @@ function onStartup()
 
     -- Check for duplicate storages
     if configManager.getBoolean(configKeys.CHECK_DUPLICATE_STORAGE_KEYS) then
-        local variableNames = {"AccountStorageKeys", "PlayerStorageKeys", "GlobalStorageKeys", "actionIds", "uniqueIds"}
+        local variableNames = { "AccountStorageKeys", "PlayerStorageKeys", "GlobalStorageKeys", "actionIds", "uniqueIds" }
         for _, variableName in ipairs(variableNames) do
             local duplicates = checkDuplicateStorageKeys(variableName)
             if duplicates then

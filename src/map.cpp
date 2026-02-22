@@ -10,6 +10,7 @@
 #include "game.h"
 #include "iomap.h"
 #include "iomapserialize.h"
+#include "mapcache.h"
 #include "monster.h"
 #include "spectators.h"
 #include "logger.h"
@@ -25,12 +26,6 @@ bool Map::loadMap(const std::string& identifier, bool loadHouses)
 		return false;
 	}
 
-	if (!IOMap::loadSpawns(this)) {
-		LOG_WARN("[Warning - Map::loadMap] Failed to load spawn data.");
-	} else {
-		LOG_INFO(fmt::format(">> Loaded {} npcs and spawned {} monsters", spawns.getNpcCount(), spawns.getMonsterCount()));
-	}
-
 	if (loadHouses) {
 		if (!IOMap::loadHouses(this)) {
 			LOG_WARN("[Warning - Map::loadMap] Failed to load house data.");
@@ -40,6 +35,12 @@ bool Map::loadMap(const std::string& identifier, bool loadHouses)
 		IOMapSerialize::loadHouseItems(this);
 		
 		LOG_INFO(fmt::format(">> Loaded {} towns with {} houses in total", towns.getTowns().size(), houses.getHouses().size()));
+	}
+
+	if (!IOMap::loadSpawns(this)) {
+		LOG_WARN("[Warning - Map::loadMap] Failed to load spawn data.");
+	} else {
+		LOG_INFO(fmt::format(">> Loaded {} npcs and spawned {} monsters", spawns.getNpcCount(), spawns.getMonsterCount()));
 	}
 	return true;
 }
@@ -79,11 +80,13 @@ Tile* Map::getTile(uint16_t x, uint16_t y, uint8_t z) const
 		return nullptr;
 	}
 
-	const Floor* floor = leaf->getFloor(z);
+	Floor* floor = const_cast<Floor*>(leaf->getFloor(z));
 	if (!floor) {
 		return nullptr;
 	}
-	return floor->tiles[x & FLOOR_MASK][y & FLOOR_MASK].get();
+	
+	// Use lazy loading: get tile from cache if real tile doesn't exist
+	return floor->getTile(x, y, z);
 }
 
 void Map::setTile(uint16_t x, uint16_t y, uint8_t z, std::unique_ptr<Tile> newTile)
@@ -126,7 +129,8 @@ void Map::setTile(uint16_t x, uint16_t y, uint8_t z, std::unique_ptr<Tile> newTi
 	uint32_t offsetX = x & FLOOR_MASK;
 	uint32_t offsetY = y & FLOOR_MASK;
 
-	auto& tile = floor->tiles[offsetX][offsetY];
+	auto& tilePair = floor->tiles[offsetX][offsetY];
+	auto& tile = tilePair.first;
 	if (tile) {
 		TileItemVector* items = newTile->getItemList();
 		if (items) {
@@ -144,6 +148,8 @@ void Map::setTile(uint16_t x, uint16_t y, uint8_t z, std::unique_ptr<Tile> newTi
 		// newTile is automatically deleted when unique_ptr goes out of scope
 	} else {
 		tile = std::move(newTile);
+		// Clear cache since we now have real tile
+		tilePair.second = nullptr;
 	}
 }
 
@@ -163,7 +169,8 @@ void Map::removeTile(uint16_t x, uint16_t y, uint8_t z)
 		return;
 	}
 
-	auto& tile = floor->tiles[x & FLOOR_MASK][y & FLOOR_MASK];
+	auto& tilePair = floor->tiles[x & FLOOR_MASK][y & FLOOR_MASK];
+	auto& tile = tilePair.first;
 	if (tile) {
 		if (const CreatureVector* creatures = tile->getCreatures()) {
 			for (int32_t i = creatures->size(); --i >= 0;) {
@@ -190,6 +197,9 @@ void Map::removeTile(uint16_t x, uint16_t y, uint8_t z)
 		// Reset unique_ptr to delete the tile
 		tile.reset();
 	}
+	
+	// Also clear cache
+	tilePair.second = nullptr;
 }
 
 bool Map::placeCreature(const Position& centerPos, Creature* creature, bool extendedPos /* = false*/,
@@ -1071,4 +1081,88 @@ uint32_t Map::clean() const
 
 	LOG_INFO(fmt::format("> CLEAN: Removed {} item{} from {} tile{} in {} seconds.", count, count != 1 ? "s" : "", tiles, tiles != 1 ? "s" : "", (OTSYS_TIME() - start) / (1000.)));
 	return count;
+}
+
+// ============================================================================
+// Floor methods for lazy loading
+// ============================================================================
+
+Tile* Floor::getTile(uint16_t x, uint16_t y, uint8_t z) {
+	uint32_t offsetX = x & FLOOR_MASK;
+	uint32_t offsetY = y & FLOOR_MASK;
+	
+	auto& tilePair = tiles[offsetX][offsetY];
+	
+	// If real tile exists, return it
+	if (tilePair.first) {
+		return tilePair.first.get();
+	}
+	
+	// If no cache, return nullptr
+	if (!tilePair.second) {
+		return nullptr;
+	}
+	
+	// Lazy loading: create real tile from cache
+	const auto& basicTile = tilePair.second;
+	
+	tilePair.first = MapCacheUtils::createTileFromBasic(basicTile, x, y, z, g_game.map.houses);
+	tilePair.second = nullptr; // Clear cache
+	
+	return tilePair.first.get();
+}
+
+void Floor::setTileCache(uint16_t x, uint16_t y, const std::shared_ptr<BasicTile>& basicTile) {
+	uint32_t offsetX = x & FLOOR_MASK;
+	uint32_t offsetY = y & FLOOR_MASK;
+	tiles[offsetX][offsetY].second = basicTile;
+}
+
+std::shared_ptr<BasicTile> Floor::getTileCache(uint16_t x, uint16_t y) const {
+	uint32_t offsetX = x & FLOOR_MASK;
+	uint32_t offsetY = y & FLOOR_MASK;
+	return tiles[offsetX][offsetY].second;
+}
+
+// ============================================================================
+// Map::setBasicTile - store tile in cache during map load
+// ============================================================================
+
+void Map::setBasicTile(uint16_t x, uint16_t y, uint8_t z, const std::shared_ptr<BasicTile>& basicTile) {
+	if (z >= MAP_MAX_LAYERS) {
+		LOG_ERROR(fmt::format("ERROR: Attempt to set tile cache on invalid coordinate {}!", Position(x, y, z)));
+		return;
+	}
+
+	QTreeLeafNode::newLeaf = false;
+	QTreeLeafNode* leaf = root.createLeaf(x, y, 15);
+
+	if (QTreeLeafNode::newLeaf) {
+		// update north
+		QTreeLeafNode* northLeaf = root.getLeaf(x, y - FLOOR_SIZE);
+		if (northLeaf) {
+			northLeaf->leafS = leaf;
+		}
+
+		// update west leaf
+		QTreeLeafNode* westLeaf = root.getLeaf(x - FLOOR_SIZE, y);
+		if (westLeaf) {
+			westLeaf->leafE = leaf;
+		}
+
+		// update south
+		QTreeLeafNode* southLeaf = root.getLeaf(x, y + FLOOR_SIZE);
+		if (southLeaf) {
+			leaf->leafS = southLeaf;
+		}
+
+		// update east
+		QTreeLeafNode* eastLeaf = root.getLeaf(x + FLOOR_SIZE, y);
+		if (eastLeaf) {
+			leaf->leafE = eastLeaf;
+		}
+	}
+
+	Floor* floor = leaf->createFloor(z);
+	floor->setTileCache(x, y, basicTile);
 }

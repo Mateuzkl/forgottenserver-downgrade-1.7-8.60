@@ -380,10 +380,10 @@ protected:
 	std::map<int32_t, std::string> cacheFiles;
 
 private:
-    void registerClass(const std::string& className, const std::string& baseClass, lua_CFunction newFunction = nullptr);
-    void registerTable(std::string_view tableName);
-    void registerMetaMethod(std::string_view className, std::string_view methodName, lua_CFunction func);
-    void registerGlobalMethod(std::string_view functionName, lua_CFunction func);
+	void registerClass(const std::string& className, const std::string& baseClass, lua_CFunction newFunction = nullptr);
+	void registerTable(std::string_view tableName);
+	void registerMetaMethod(std::string_view className, std::string_view methodName, lua_CFunction func);
+	void registerGlobalMethod(std::string_view functionName, lua_CFunction func);
 	void registerVariable(std::string_view tableName, std::string_view name, lua_Integer value);
 	void registerGlobalVariable(std::string_view name, lua_Integer value);
 	void registerGlobalBoolean(std::string_view name, bool value);
@@ -455,7 +455,6 @@ private:
 	static int luaDatabaseLastInsertId(lua_State* L);
 	static int luaDatabaseTableExists(lua_State* L);
 
-
 	static int luaResultGetNumber(lua_State* L);
 	static int luaResultGetString(lua_State* L);
 	static int luaResultGetStream(lua_State* L);
@@ -470,16 +469,16 @@ private:
 	static int luaSystemTime(lua_State* L);
 	static int luaSystemNanoTime(lua_State* L);
 
-    static int luaTableCreate(lua_State* L);
+	static int luaTableCreate(lua_State* L);
 
-    // global helper declared to satisfy registration in luascript.cpp
-    static int luaTransformToSHA1(lua_State* L);
+	// global helper declared to satisfy registration in luascript.cpp
+	static int luaTransformToSHA1(lua_State* L);
 
 	static int luaPlayerIsLiveCasting(lua_State* L);
 	static int luaPlayerStartLiveCasting(lua_State* L);
 	static int luaPlayerStopLiveCasting(lua_State* L);
 	static int luaPlayerGetReset(lua_State* L); // reset system
-	static int luaPlayerDoReset(lua_State* L); // reset system
+	static int luaPlayerDoReset(lua_State* L);  // reset system
 	static int luaPlayerSetReset(lua_State* L); // reset system
 	static int luaPlayerReloadWarList(lua_State* L);
 	static int luaPlayerSendAutoLootWindow(lua_State* L);
@@ -487,7 +486,6 @@ private:
 	static int luaPlayerSetAutoLootEnabled(lua_State* L);
 	static int luaPlayerIsAutoLootEnabled(lua_State* L);
 	static int luaPlayerClearAutoLoot(lua_State* L);
-
 
 	//
 	std::string lastLuaError;
@@ -569,39 +567,39 @@ LuaVariant getVariant(lua_State* L, int32_t arg);
 template <typename T>
 inline typename std::enable_if<std::is_enum<T>::value, T>::type getInteger(lua_State* L, int32_t arg)
 {
-    int isNum = 0;
-    lua_Integer integer = lua_tointegerx(L, arg, &isNum);
-    if (isNum == 0) {
-        // Se não for inteiro, tenta pegar como número decimal e arredonda
-        lua_Number number = lua_tonumber(L, arg);
-        if (number == 0 && !lua_isnumber(L, arg)) {
-            // Não é um número válido
-            return static_cast<T>(0);
-        }
-        // Arredonda o número decimal para inteiro
-        integer = static_cast<lua_Integer>(std::floor(number));
-    }
+	int isNum = 0;
+	lua_Integer integer = lua_tointegerx(L, arg, &isNum);
+	if (isNum == 0) {
+		// Se não for inteiro, tenta pegar como número decimal e arredonda
+		lua_Number number = lua_tonumber(L, arg);
+		if (number == 0 && !lua_isnumber(L, arg)) {
+			// Não é um número válido
+			return static_cast<T>(0);
+		}
+		// Arredonda o número decimal para inteiro
+		integer = static_cast<lua_Integer>(std::floor(number));
+	}
 
-    return static_cast<T>(static_cast<typename std::underlying_type<T>::type>(integer));
+	return static_cast<T>(static_cast<typename std::underlying_type<T>::type>(integer));
 }
 
 template <typename T>
 inline typename std::enable_if<std::is_integral<T>::value, T>::type getInteger(lua_State* L, int32_t arg)
 {
-    int isNum = 0;
-    lua_Integer integer = lua_tointegerx(L, arg, &isNum);
-    if (isNum == 0) {
-        // Se não for inteiro, tenta pegar como número decimal e arredonda
-        lua_Number number = lua_tonumber(L, arg);
-        if (number == 0 && !lua_isnumber(L, arg)) {
-            // Não é um número válido
-            return 0;
-        }
-        // Arredonda o número decimal para inteiro
-        integer = static_cast<lua_Integer>(std::floor(number));
-    }
+	int isNum = 0;
+	lua_Integer integer = lua_tointegerx(L, arg, &isNum);
+	if (isNum == 0) {
+		// Se não for inteiro, tenta pegar como número decimal e arredonda
+		lua_Number number = lua_tonumber(L, arg);
+		if (number == 0 && !lua_isnumber(L, arg)) {
+			// Não é um número válido
+			return 0;
+		}
+		// Arredonda o número decimal para inteiro
+		integer = static_cast<lua_Integer>(std::floor(number));
+	}
 
-    return static_cast<T>(integer);
+	return static_cast<T>(integer);
 }
 
 template <typename T>

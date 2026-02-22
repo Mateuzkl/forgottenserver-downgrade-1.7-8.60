@@ -69,7 +69,7 @@ void Player::addSpectator(ProtocolSpectator* spectator) {
 	
 	std::ostringstream query;
 	query << "UPDATE `players_online` SET `cast_spectators` = '" << spectatorCount << "' WHERE `player_id` = '" << getGUID() << "';";
-	Database::getInstance().executeQuery(query.str());
+	Database::getInstance().executeQuery(query.str()); 
 }
 
 void Player::removeSpectator(ProtocolSpectator* spectator) {
@@ -1260,6 +1260,22 @@ void Player::onChangeZone(ZoneType_t zone)
 			setAttackedCreature(nullptr);
 			onAttackedCreatureDisappear(false);
 		}
+
+		// Start stamina regeneration in protection zone
+		if (ConfigManager::getBoolean(ConfigManager::STAMINA_PZ)) {
+			staminaPzOrangeDelayMs = ConfigManager::getInteger(ConfigManager::STAMINA_ORANGE_DELAY) * 60 * 1000;
+			staminaPzGreenDelayMs = ConfigManager::getInteger(ConfigManager::STAMINA_GREEN_DELAY) * 60 * 1000;
+
+			staminaPzActive = true;
+			staminaPzTicks = 0;
+			uint32_t delay = (staminaMinutes > 2400) ? staminaPzGreenDelayMs / (60 * 1000) : staminaPzOrangeDelayMs / (60 * 1000);
+			uint32_t gain = ConfigManager::getInteger(ConfigManager::STAMINA_PZ_GAIN);
+			sendTextMessage(MESSAGE_STATUS_SMALL, fmt::format("You're in the protection zone. Every {} minutes, gain {} stamina.", delay, gain));
+		}
+	} else {
+		// Stop stamina regeneration when leaving protection zone
+		sendTextMessage(MESSAGE_STATUS_SMALL, "You are no longer refilling stamina, since you left a regeneration zone.");
+		staminaPzActive = false;
 	}
 
 	g_game.updateCreatureWalkthrough(this);
@@ -1289,6 +1305,90 @@ void Player::onAttackedCreatureChangeZone(ZoneType_t zone)
 			}
 		}
 	}
+}
+
+void Player::updateStaminaRegen(int64_t timePassed)
+{
+	if (!staminaPzActive && !staminaTrainerActive) {
+		return;
+	}
+
+	// Stamina PZ regeneration
+	if (staminaPzActive && staminaMinutes < 2520) {
+		staminaPzTicks += timePassed;
+		
+		// Calculate delay based on current stamina level (cached for efficiency)
+		uint32_t delayMs = (staminaMinutes > 2400) ? staminaPzGreenDelayMs : staminaPzOrangeDelayMs;
+		
+		if (staminaPzTicks >= delayMs) {
+			staminaPzTicks -= delayMs;
+			uint16_t gain = ConfigManager::getInteger(ConfigManager::STAMINA_PZ_GAIN);
+			setStaminaMinutes(staminaMinutes + gain);
+			sendStats();
+			sendTextMessage(MESSAGE_STATUS_SMALL, fmt::format("It has been regenerated {} of stamina due to being in the protection zone.", gain));
+			
+			if (staminaMinutes >= 2520) {
+				staminaPzActive = false;
+				sendTextMessage(MESSAGE_STATUS_SMALL, "You are no longer refilling stamina, because your stamina is already full.");
+			}
+		}
+	}
+
+	// Stamina Trainer regeneration
+	if (staminaTrainerActive) {
+		Creature* target = getAttackedCreature();
+		if (target && isTrainerTarget(target)) {
+			staminaTrainerTicks += timePassed;
+
+			if (staminaTrainerTicks >= staminaTrainerDelayMs) {
+				staminaTrainerTicks -= staminaTrainerDelayMs;
+				uint16_t gain = ConfigManager::getInteger(ConfigManager::STAMINA_TRAINER_GAIN);
+				setStaminaMinutes(staminaMinutes + gain);
+				sendStats();
+				sendTextMessage(MESSAGE_EVENT_ADVANCE, fmt::format("It has been regenerated {} of stamina by being in training.", gain));
+			}
+		} else {
+			staminaTrainerActive = false;
+		}
+	}
+}
+
+bool Player::isTrainerTarget(Creature* creature) const
+{
+	if (!creature) {
+		return false;
+	}
+
+	std::string_view trainerNames = ConfigManager::getString(ConfigManager::STAMINATRAINER_NAMES);
+	if (trainerNames.empty()) {
+		return creature->getName() == "Trainer";
+	}
+
+	const std::string& targetName = creature->getName();
+	size_t pos = 0;
+	while (pos < trainerNames.length()) {
+		size_t semicolon = trainerNames.find(';', pos);
+		std::string_view name;
+		if (semicolon == std::string_view::npos) {
+			name = trainerNames.substr(pos);
+			pos = trainerNames.length();
+		} else {
+			name = trainerNames.substr(pos, semicolon - pos);
+			pos = semicolon + 1;
+		}
+
+		// Trim whitespace
+		size_t start = name.find_first_not_of(" \t\n\r");
+		size_t end = name.find_last_not_of(" \t\n\r");
+		if (start != std::string_view::npos) {
+			name = name.substr(start, end - start + 1);
+		}
+
+		if (!name.empty() && targetName == name) {
+			return true;
+		}
+	}
+	return false;
 }
 
 void Player::onRemoveCreature(Creature* creature, bool isLogout)
@@ -1653,6 +1753,9 @@ void Player::onThink(uint32_t interval)
 	if (lastStatsTrainingTime != getOfflineTrainingTime() / 60 / 1000) {
 		sendStats();
 	}
+
+	// Update stamina regeneration
+	updateStaminaRegen(interval);
 }
 
 uint32_t Player::isMuted() const
@@ -1831,7 +1934,7 @@ void Player::addExperience(Creature* source, uint64_t exp, bool sendText /* = fa
 		return;
 	}
 
-	g_events->eventPlayerOnGainExperience(this, source, exp, rawExp);
+	g_events->eventPlayerOnGainExperience(this, source, exp, rawExp, sendText);
 	if (exp == 0) {
 		return;
 	}
@@ -1847,27 +1950,6 @@ void Player::addExperience(Creature* source, uint64_t exp, bool sendText /* = fa
 	}
 
 	experience += exp;
-
-	if (sendText) {
-		std::string expString = std::to_string(exp) + (exp != 1 ? " experience points." : " experience point.");
-
-		TextMessage message(MESSAGE_STATUS_DEFAULT, "You gained " + expString);
-		sendTextMessage(message);
-
-		g_game.addAnimatedText(std::to_string(exp), position, TEXTCOLOR_WHITE);
-
-		SpectatorVec spectators;
-		g_game.map.getSpectators(spectators, position, false, true);
-		spectators.erase(this);
-		if (!spectators.empty()) {
-			message.type = MESSAGE_STATUS_DEFAULT;
-			message.text = getName() + " gained " + expString;
-			for (Creature* spectator : spectators) {
-				assert(dynamic_cast<Player*>(spectator) != nullptr);
-				static_cast<Player*>(spectator)->sendTextMessage(message);
-			}
-		}
-	}
 
 	uint32_t prevLevel = level;
 	while (experience >= nextLevelExp) {
@@ -3368,6 +3450,8 @@ bool Player::setAttackedCreature(Creature* creature)
 {
 	if (!Creature::setAttackedCreature(creature)) {
 		sendCancelTarget();
+		// Stop stamina trainer regeneration if we stop attacking
+		staminaTrainerActive = false;
 		return false;
 	}
 
@@ -3382,6 +3466,9 @@ bool Player::setAttackedCreature(Creature* creature)
 
 	if (creature) {
 		g_dispatcher.addTask([id = getID()]() { g_game.checkCreatureAttack(id); });
+	} else {
+		// Stop stamina trainer regeneration if we stop attacking
+		staminaTrainerActive = false;
 	}
 	return true;
 }
@@ -3670,6 +3757,13 @@ void Player::onCombatRemoveCondition(Condition* condition)
 void Player::onAttackedCreature(Creature* target, bool addFightTicks /* = true */)
 {
 	Creature::onAttackedCreature(target);
+
+	// Check if attacking a Trainer for stamina regeneration
+	if (ConfigManager::getBoolean(ConfigManager::STAMINA_TRAINER) && target && isTrainerTarget(target)) {
+		staminaTrainerDelayMs = ConfigManager::getInteger(ConfigManager::STAMINA_TRAINER_DELAY) * 60 * 1000;
+		staminaTrainerActive = true;
+		staminaTrainerTicks = 0;
+	}
 
 	if (target->getZone() == ZONE_PVP) {
 		return;

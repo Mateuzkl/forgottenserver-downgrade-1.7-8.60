@@ -42,7 +42,7 @@ retry:
 		mysql_options(handle.get(), MYSQL_OPT_SSL_MODE, &ssl_mode);
 	}
 #endif
-	
+
 	// connects to database
 	if (!mysql_real_connect(handle.get(), getString(ConfigManager::MYSQL_HOST).data(),
 	                        getString(ConfigManager::MYSQL_USER).data(), getString(ConfigManager::MYSQL_PASS).data(),

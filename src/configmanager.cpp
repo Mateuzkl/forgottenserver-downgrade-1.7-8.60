@@ -404,6 +404,7 @@ bool ConfigManager::load()
 	integers[Integer::STAMINA_GREEN_DELAY] = getGlobalInteger(L, "staminaGreenDelay", 5);
 	integers[Integer::STAMINA_TRAINER_DELAY] = getGlobalInteger(L, "staminaTrainerDelay", 5);
 	integers[Integer::STAMINA_TRAINER_GAIN] = getGlobalInteger(L, "staminaTrainerGain", 1);
+	strings[String::STAMINATRAINER_NAMES] = getGlobalString(L, "staminaTrainerNames", "");
 	integers[Integer::HEALTH_GAIN_COLOUR] = getGlobalInteger(L, "healthGainColour", TEXTCOLOR_MAYABLUE);
 	integers[Integer::MANA_GAIN_COLOUR] = getGlobalInteger(L, "manaGainColour", TEXTCOLOR_BLUE);
 	integers[Integer::MANA_LOSS_COLOUR] = getGlobalInteger(L, "manaLossColour", TEXTCOLOR_BLUE);

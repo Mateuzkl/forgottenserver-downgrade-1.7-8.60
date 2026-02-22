@@ -80,7 +80,8 @@ struct Skill
 
 using AutoLootMap = std::map<uint16_t, std::pair<uint16_t, bool>>;
 
-struct AutoLootConfig {
+struct AutoLootConfig
+{
 	AutoLootMap itemList;
 	bool lootAnything = false;
 	bool enabled = true;
@@ -569,7 +570,8 @@ public:
 			client->sendCreatureSkull(creature);
 		}
 	}
-	void sendCreatureEmblem(Creature* creature) const {
+	void sendCreatureEmblem(Creature* creature) const
+	{
 		if (client) {
 			client->sendCreatureEmblem(creature);
 		}
@@ -633,7 +635,8 @@ public:
 		}
 	}
 
-	void sendChannelMessage(std::string_view author, std::string_view text, SpeakClasses type, uint16_t channel, bool broadcast = true)
+	void sendChannelMessage(std::string_view author, std::string_view text, SpeakClasses type, uint16_t channel,
+	                        bool broadcast = true)
 	{
 		if (client) {
 			client->sendChannelMessage(author, text, type, channel, broadcast);
@@ -651,15 +654,13 @@ public:
 	                      int32_t oldStackPos, bool teleport)
 	{
 		if (client) {
-			if (creature == this && isLiveCasting()) {
-				client->sendMoveCreature(creature, newPos, newStackPos, oldPos, oldStackPos, teleport);
+			client->sendMoveCreature(creature, newPos, newStackPos, oldPos, oldStackPos, teleport);
+			if (isLiveCasting()) {
 				for (auto& spectator : spectators) {
 					if (spectator && spectator->isAcceptingPackets()) {
 						spectator->sendMoveCreature(creature, newPos, newStackPos, oldPos, oldStackPos, teleport);
 					}
 				}
-			} else {
-				client->sendMoveCreature(creature, newPos, newStackPos, oldPos, oldStackPos, teleport);
 			}
 		}
 	}
@@ -763,7 +764,8 @@ public:
 			client->sendSpellGroupCooldown(groupId, time);
 		}
 	}
-	void sendUseItemCooldown(uint32_t time) {
+	void sendUseItemCooldown(uint32_t time)
+	{
 		if (client) {
 			client->sendUseItemCooldown(time);
 		}
@@ -1037,8 +1039,7 @@ public:
 	void forgetInstantSpell(const std::string& spellName);
 	bool hasLearnedInstantSpell(std::string_view spellName) const;
 
-
-	//Autoloot
+	// Autoloot
 	void sendAutoLootWindow() const;
 	void parseAutoLootWindow(const std::string& text);
 	Container* findNonEmptyContainer(uint16_t itemId);
@@ -1047,29 +1048,19 @@ public:
 	void addSpectator(ProtocolSpectator* spectator);
 	void removeSpectator(ProtocolSpectator* spectator);
 
-	std::vector<ProtocolSpectator*> getSpectators() {
-		return spectators;
-	}
+	std::vector<ProtocolSpectator*> getSpectators() { return spectators; }
 
-	uint32_t getSpectatorCount() {
-		return spectatorCount;
-	}
+	uint32_t getSpectatorCount() { return spectatorCount; }
 
-	bool hasCastExpBonus() const {
-		return castExpBonusActive;
-	}
+	bool hasCastExpBonus() const { return castExpBonusActive; }
 
-	bool isLiveCasting() {
-		return liveCasting;
-	}
+	bool isLiveCasting() { return liveCasting; }
 
 	bool stopLiveCasting();
 
 	bool startLiveCasting(const std::string& password);
 
-	bool isSpectating() {
-		return isSpectator;
-	}
+	bool isSpectating() { return isSpectator; }
 
 	void updateRegeneration();
 
@@ -1100,6 +1091,11 @@ public:
 	uint32_t getItemTypeCount(uint16_t itemId, int32_t subType = -1) const override;
 
 	void setStaminaMinutes(uint16_t newStamina) { staminaMinutes = std::min<uint16_t>(2520, newStamina); }
+
+	void updateStaminaRegen(int64_t timePassed);
+	void stopStaminaPzRegen() { staminaPzActive = false; }
+	void stopStaminaTrainerRegen() { staminaTrainerActive = false; }
+	bool isTrainerTarget(Creature* creature) const;
 
 	void incrementWindowTextId() { windowTextId++; }
 	void setRawWriteItem(Item* item) { writeItem = item; }
@@ -1281,6 +1277,13 @@ private:
 	uint16_t maxWriteLen = 0;
 	int16_t lastDepotId = -1;
 
+	int64_t staminaPzTicks = 0;
+	int64_t staminaTrainerTicks = 0;
+
+	uint32_t staminaPzOrangeDelayMs = 0;
+	uint32_t staminaPzGreenDelayMs = 0;
+	uint32_t staminaTrainerDelayMs = 0;
+
 	uint8_t soul = 0;
 	std::bitset<PLAYER_MAX_BLESSINGS + 1> blessings;
 	uint8_t levelPercent = 0;
@@ -1309,6 +1312,8 @@ private:
 	std::string tokenHash;
 	bool tokenLocked = false;
 	bool castExpBonusActive = false;
+	bool staminaPzActive = false;
+	bool staminaTrainerActive = false;
 
 	AccountManagerMode accountManager{ACCOUNT_MANAGER_NONE};
 	std::array<bool, 15> managerTalkState{};

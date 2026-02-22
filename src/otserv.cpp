@@ -10,8 +10,9 @@
 #include "databasetasks.h"
 #include "game.h"
 #include "logger.h"
-#include "protocollogin.h"
+#include "luascript.h"
 #include "protocoladmin.h"
+#include "protocollogin.h"
 #include "protocolspectator.h"
 #include "protocolstatus.h"
 #include "rsa.h"
@@ -20,10 +21,9 @@
 #include "scriptmanager.h"
 #include "server.h"
 #include "signals.h"
-#include "luascript.h"	
 
-#include <fmt/format.h>
 #include <fmt/color.h>
+#include <fmt/format.h>
 #include <fstream>
 #if __has_include("gitmetadata.h")
 #include "gitmetadata.h"
@@ -163,7 +163,7 @@ void mainLoader(ServiceManager* services)
 		return;
 	}
 	LOG_INFO(fmt::format(">> OTB v{:d}.{:d}.{:d}", Item::items.majorVersion, Item::items.minorVersion,
-	                         Item::items.buildNumber));
+	                     Item::items.buildNumber));
 
 	if (!Item::items.loadFromXml()) {
 		startupErrorMessage("Unable to load items (XML)!");
@@ -188,11 +188,7 @@ void mainLoader(ServiceManager* services)
 		return;
 	}
 
-	LOG_INFO(">> Loading lua monsters");
-	if (!g_scripts->loadScripts("monster", false, false)) {
-		startupErrorMessage("Failed to load lua monsters");
-		return;
-	}
+	LOG_INFO(fmt::format(">> Loaded {:d} monsters", g_monsters.monsters.size()));
 
 	LOG_INFO(">> Loading outfits");
 	if (!Outfits::getInstance().loadFromXml()) {
@@ -261,7 +257,9 @@ void mainLoader(ServiceManager* services)
 
 #ifndef _WIN32
 	if (getuid() == 0 || geteuid() == 0) {
-		LOG_INFO(fmt::format("> Warning: {} has been executed as root user, please consider running it as a normal user.", STATUS_SERVER_NAME));
+		LOG_INFO(
+		    fmt::format("> Warning: {} has been executed as root user, please consider running it as a normal user.",
+		                STATUS_SERVER_NAME));
 	}
 #endif
 
@@ -297,20 +295,21 @@ void startServer()
 	g_stats.start();
 #endif
 
-	g_dispatcher.addTask(createTaskWithStats([=, services = &serviceManager]() { mainLoader(services); }, "MainLoader", ""));
+	g_dispatcher.addTask(
+	    createTaskWithStats([=, services = &serviceManager]() { mainLoader(services); }, "MainLoader", ""));
 
 	g_loaderSignal.wait(g_loaderUniqueLock);
 
 	if (serviceManager.is_running()) {
-		LOG_INFO(">> Version TFS: {} | Protocol: {} | Ports: {} / {} | IP: {}", 
-			fmt::format(fg(fmt::color::lime_green), "{}", STATUS_SERVER_VERSION),
-			fmt::format(fg(fmt::color::lime_green), "{}", CLIENT_VERSION_STR),
-			fmt::format(fg(fmt::color::lime_green), "{}", getInteger(ConfigManager::LOGIN_PORT)),
-			fmt::format(fg(fmt::color::lime_green), "{}", getInteger(ConfigManager::GAME_PORT)),
-			fmt::format(fg(fmt::color::lime_green), "{}", getString(ConfigManager::IP)));
+		LOG_INFO(">> Version TFS: {} | Protocol: {} | Ports: {} / {} | IP: {}",
+		         fmt::format(fg(fmt::color::lime_green), "{}", STATUS_SERVER_VERSION),
+		         fmt::format(fg(fmt::color::lime_green), "{}", CLIENT_VERSION_STR),
+		         fmt::format(fg(fmt::color::lime_green), "{}", getInteger(ConfigManager::LOGIN_PORT)),
+		         fmt::format(fg(fmt::color::lime_green), "{}", getInteger(ConfigManager::GAME_PORT)),
+		         fmt::format(fg(fmt::color::lime_green), "{}", getString(ConfigManager::IP)));
 		LOG_INFO("");
 		LOG_INFO(">> {} Server Online!", getString(ConfigManager::SERVER_NAME));
-	serviceManager.run();
+		serviceManager.run();
 	} else {
 		LOG_INFO(">> No services running. The server is NOT online.");
 		g_scheduler.shutdown();
@@ -333,7 +332,6 @@ void startServer()
 #ifdef STATS_ENABLED
 	g_stats.join();
 #endif
-
 }
 
 void printServerVersion()
@@ -379,7 +377,9 @@ void printCustomInfo()
 {
 	LOG_INFO("");
 	LOG_INFO(fmt::format(fg(fmt::color::red), "Further developed by Mateuzkl (Custom Modified Version)"));
-	LOG_INFO(fmt::format(fg(fmt::color::yellow), "Repository ORIGINAL: https://github.com/MillhioreBT/forgottenserver-downgrade"));
-	LOG_INFO(fmt::format(fg(fmt::color::yellow), "Repository CUSTOM: https://github.com/Mateuzkl/forgottenserver-downgrade"));
+	LOG_INFO(fmt::format(fg(fmt::color::yellow),
+	                     "Repository ORIGINAL: https://github.com/MillhioreBT/forgottenserver-downgrade"));
+	LOG_INFO(fmt::format(fg(fmt::color::yellow),
+	                     "Repository CUSTOM: https://github.com/Mateuzkl/forgottenserver-downgrade"));
 	LOG_INFO("");
 }

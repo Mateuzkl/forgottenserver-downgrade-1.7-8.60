@@ -5,10 +5,11 @@
 
 #include "baseevents.h"
 
-#include "pugicast.h"
+#include "logger.h"
 #include "pugicast.h"
 #include "tools.h"
-#include "logger.h"
+
+#include <filesystem>
 #include <fmt/format.h>
 
 extern LuaEnvironment g_luaEnvironment;
@@ -22,7 +23,10 @@ bool BaseEvents::loadFromXml()
 
 	auto scriptsName = std::string{getScriptBaseName()};
 	std::string basePath = "data/" + scriptsName + "/";
-	getScriptInterface().loadFile(basePath + "lib/" + scriptsName + ".lua");
+	std::string libFile = basePath + "lib/" + scriptsName + ".lua";
+	if (std::filesystem::exists(libFile)) {
+		getScriptInterface().loadFile(libFile);
+	}
 
 	std::string filename = basePath + scriptsName + ".xml";
 
@@ -42,7 +46,8 @@ bool BaseEvents::loadFromXml()
 		}
 
 		if (!event->configureEvent(node)) {
-			std::string warningMsg = fmt::format("[Warning - BaseEvents::loadFromXml] Failed to configure event: {}", node.name());
+			std::string warningMsg =
+			    fmt::format("[Warning - BaseEvents::loadFromXml] Failed to configure event: {}", node.name());
 			if (node.attribute("name")) {
 				warningMsg += fmt::format(" (name: {})", node.attribute("name").as_string());
 			}
@@ -97,8 +102,12 @@ bool Event::checkScript(std::string_view basePath, std::string_view scriptsName,
 	LuaScriptInterface* testInterface = g_luaEnvironment.getTestInterface();
 	testInterface->reInitState();
 
-	if (testInterface->loadFile(fmt::format("{}lib/{}.lua", basePath, scriptsName)) == -1) {
-		LOG_WARN(fmt::format("[Warning - Event::checkScript] Can not load {} lib/{}.lua", scriptsName, scriptsName));
+	std::string libFile = fmt::format("{}lib/{}.lua", basePath, scriptsName);
+	if (std::filesystem::exists(libFile)) {
+		if (testInterface->loadFile(libFile) == -1) {
+			LOG_WARN(
+			    fmt::format("[Warning - Event::checkScript] Can not load {} lib/{}.lua", scriptsName, scriptsName));
+		}
 	}
 
 	if (scriptId != 0) {
@@ -114,7 +123,8 @@ bool Event::checkScript(std::string_view basePath, std::string_view scriptsName,
 
 	int32_t id = testInterface->getEvent(getScriptEventName());
 	if (id == -1) {
-		LOG_WARN(fmt::format("[Warning - Event::checkScript] Event {} not found. {}", getScriptEventName(), scriptFile));
+		LOG_WARN(
+		    fmt::format("[Warning - Event::checkScript] Event {} not found. {}", getScriptEventName(), scriptFile));
 		return false;
 	}
 	return true;

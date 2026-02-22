@@ -7,6 +7,7 @@
 #include "otpch.h"
 
 #include "house.h"
+#include "mapcache.h"
 #include "position.h"
 #include "spawn.h"
 #include "town.h"
@@ -16,6 +17,7 @@ class Creature;
 inline constexpr int32_t MAP_MAX_LAYERS = 16;
 
 struct FindPathParams;
+
 struct AStarNode
 {
 	AStarNode* parent;
@@ -24,7 +26,6 @@ struct AStarNode
 };
 
 inline constexpr int32_t MAX_NODES = 512;
-
 inline constexpr int32_t MAP_NORMALWALKCOST = 10;
 inline constexpr int32_t MAP_DIAGONALWALKCOST = 25;
 
@@ -66,7 +67,18 @@ struct Floor
 	Floor(const Floor&) = delete;
 	Floor& operator=(const Floor&) = delete;
 
-	std::unique_ptr<Tile> tiles[FLOOR_SIZE][FLOOR_SIZE];
+	// Pair: <Tile (real), BasicTile (cache)>
+	// BasicTile is stored during map load, real Tile is created on first access (lazy loading)
+	std::pair<std::unique_ptr<Tile>, std::shared_ptr<BasicTile>> tiles[FLOOR_SIZE][FLOOR_SIZE];
+
+	// Get tile, creating from cache if needed (z is needed for tile creation)
+	Tile* getTile(uint16_t x, uint16_t y, uint8_t z);
+
+	// Set tile cache (during map load)
+	void setTileCache(uint16_t x, uint16_t y, const std::shared_ptr<BasicTile>& basicTile);
+
+	// Get tile cache
+	std::shared_ptr<BasicTile> getTileCache(uint16_t x, uint16_t y) const;
 };
 
 class FrozenPathingConditionCall;
@@ -108,7 +120,6 @@ protected:
 
 private:
 	std::unique_ptr<QTreeNode> child[4];
-
 	friend class Map;
 };
 
@@ -120,6 +131,7 @@ public:
 		leaf = true;
 		newLeaf = true;
 	}
+
 	~QTreeLeafNode() = default;
 
 	// non-copyable
@@ -148,27 +160,25 @@ private:
  * Map class.
  * Holds all the actual map-data
  */
-
 class Map
 {
 public:
-	static constexpr int32_t maxClientViewportX = 14;
-	static constexpr int32_t maxClientViewportY = 10;
-	static constexpr int32_t maxViewportX = maxClientViewportX + 2;
-	static constexpr int32_t maxViewportY = maxClientViewportY + 2;
+	// Standard 8.60 client viewport
+	static constexpr int32_t maxClientViewportX = 8;
+	static constexpr int32_t maxClientViewportY = 6;
+
+	// Extended viewport for OTCv8
+	static constexpr int32_t maxClientViewportX_OTCv8 = 14;
+	static constexpr int32_t maxClientViewportY_OTCv8 = 10;
+
+	// Server spectator range (must cover the largest possible viewport)
+	static constexpr int32_t maxViewportX = maxClientViewportX_OTCv8 + 2; // 16
+	static constexpr int32_t maxViewportY = maxClientViewportY_OTCv8 + 2; // 12
 
 	uint32_t clean() const;
 
-	/**
-	 * Load a map.
-	 * \returns true if the map was loaded successfully
-	 */
 	bool loadMap(const std::string& identifier, bool loadHouses);
 
-	/**
-	 * Save a map.
-	 * \returns true if the map was saved successfully
-	 */
 	static bool save();
 
 	/**
@@ -182,15 +192,29 @@ public:
 	 * Set a single tile.
 	 */
 	void setTile(uint16_t x, uint16_t y, uint8_t z, std::unique_ptr<Tile> newTile);
-	void setTile(const Position& pos, std::unique_ptr<Tile> newTile) { setTile(pos.x, pos.y, pos.z, std::move(newTile)); }
-	
+	void setTile(const Position& pos, std::unique_ptr<Tile> newTile)
+	{
+		setTile(pos.x, pos.y, pos.z, std::move(newTile));
+	}
+
 	// Backward compatibility wrapper - takes ownership of raw pointer
 	void setTile(uint16_t x, uint16_t y, uint8_t z, Tile* newTile) { setTile(x, y, z, std::unique_ptr<Tile>(newTile)); }
 	void setTile(const Position& pos, Tile* newTile) { setTile(pos.x, pos.y, pos.z, std::unique_ptr<Tile>(newTile)); }
 
 	/**
+	 * Set a tile cache (for lazy loading during map load)
+	 */
+
+	void setBasicTile(uint16_t x, uint16_t y, uint8_t z, const std::shared_ptr<BasicTile>& basicTile);
+	void setBasicTile(const Position& pos, const std::shared_ptr<BasicTile>& basicTile)
+	{
+		setBasicTile(pos.x, pos.y, pos.z, basicTile);
+	}
+
+	/**
 	 * Removes a single tile.
 	 */
+
 	void removeTile(uint16_t x, uint16_t y, uint8_t z);
 	void removeTile(const Position& pos) { removeTile(pos.x, pos.y, pos.z); }
 
@@ -198,10 +222,10 @@ public:
 	 * Place a creature on the map
 	 * \param centerPos The position to place the creature
 	 * \param creature Creature to place on the map
-	 * \param extendedPos If true, the creature will in first-hand be placed 2
-	 * tiles away \param forceLogin If true, placing the creature will not fail
-	 * because of obstacles (creatures/chests)
+	 * \param extendedPos If true, the creature will in first-hand be placed 2 tiles away
+	 * \param forceLogin If true, placing the creature will not fail because of obstacles (creatures/chests)
 	 */
+
 	bool placeCreature(const Position& centerPos, Creature* creature, bool extendedPos = false,
 	                   bool forceLogin = false);
 
@@ -216,33 +240,38 @@ public:
 
 	/**
 	 * Checks if you can throw an object to that position
-	 *	\param fromPos from Source point
-	 *	\param toPos Destination point
-	 *	\param rangex maximum allowed range horizontally
-	 *	\param rangey maximum allowed range vertically
-	 *	\param checkLineOfSight checks if there is any blocking objects in the
-	 *way \param sameFloor checks if the destination is on same floor \returns
-	 *The result if you can throw there or not
+	 * \param fromPos from Source point
+	 * \param toPos Destination point
+	 * \param rangex maximum allowed range horizontally
+	 * \param rangey maximum allowed range vertically
+	 * \param checkLineOfSight checks if there is any blocking objects in the way
+	 * \param sameFloor checks if the destination is on same floor
+	 * \returns The result if you can throw there or not
 	 */
+
 	bool canThrowObjectTo(const Position& fromPos, const Position& toPos, bool checkLineOfSight = true,
 	                      bool sameFloor = false, int32_t rangex = Map::maxClientViewportX,
 	                      int32_t rangey = Map::maxClientViewportY) const;
 
 	/**
 	 * Checks if there are no obstacles on that position
-	 *	\param blockFloor counts the ground tile as an obstacle
-	 *	\returns The result if there is an obstacle or not
+	 * \param blockFloor counts the ground tile as an obstacle
+	 * \returns The result if there is an obstacle or not
 	 */
+
 	bool isTileClear(uint16_t x, uint16_t y, uint8_t z, bool blockFloor = false) const;
 
 	/**
 	 * Checks if path is clear from fromPos to toPos
-	 * Notice: This only checks a straight line if the path is clear, for path
-	 *finding use getPathTo. \param fromPos from Source point \param toPos
-	 *Destination point \param sameFloor checks if the destination is on same
-	 *floor \returns The result if there is no obstacles
+	 * Notice: This only checks a straight line if the path is clear, for pathfinding use getPathTo.
+	 * \param fromPos from Source point
+	 * \param toPos Destination point
+	 * \param sameFloor checks if the destination is on same floor
+	 * \returns The result if there is no obstacles
 	 */
+
 	bool isSightClear(const Position& fromPos, const Position& toPos, bool sameFloor = false) const;
+
 	bool checkSightLine(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint8_t z) const;
 
 	const Tile* canWalkTo(const Creature& creature, const Position& pos) const;
@@ -273,7 +302,6 @@ private:
 	uint32_t width = 0;
 	uint32_t height = 0;
 
-	// Actually scans the map for spectators
 	void getSpectatorsInternal(SpectatorVec& spectators, const Position& centerPos, int32_t minRangeX,
 	                           int32_t maxRangeX, int32_t minRangeY, int32_t maxRangeY, int32_t minRangeZ,
 	                           int32_t maxRangeZ, bool onlyPlayers) const;
