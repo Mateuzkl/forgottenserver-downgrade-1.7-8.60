@@ -240,6 +240,7 @@
     <ClCompile Include="..\src\mailbox.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\map.cpp" />
+   <ClCompile Include="..\src\mapcache.cpp" />
     <ClCompile Include="..\src\matrixarea.cpp" />
     <ClCompile Include="..\src\monster.cpp" />
     <ClCompile Include="..\src\monsters.cpp" />
@@ -334,6 +335,7 @@
     <ClInclude Include="..\src\luascript.h" />
     <ClInclude Include="..\src\mailbox.h" />
     <ClInclude Include="..\src\map.h" />
+    <ClInclude Include="..\src\mapcache.h" />
     <ClInclude Include="..\src\matrixarea.h" />
     <ClInclude Include="..\src\monster.h" />
     <ClInclude Include="..\src\monsters.h" />
