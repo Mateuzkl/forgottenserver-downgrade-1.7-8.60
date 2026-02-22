@@ -176,6 +176,12 @@ void mainLoader(ServiceManager* services)
 		return;
 	}
 
+		LOG_INFO(">> Loading spells");
+	if (!g_scripts->loadScripts("scripts/spells", false, false)) {
+		startupErrorMessage("Failed to load spell scripts");
+		return;
+	}
+
 	LOG_INFO(">> Loading lua scripts");
 	if (!g_scripts->loadScripts("scripts", false, false)) {
 		startupErrorMessage("Failed to load lua scripts");
