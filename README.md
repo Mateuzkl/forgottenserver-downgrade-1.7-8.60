@@ -139,7 +139,7 @@ end
 ```
 
 **2. Extended Sprites (GameSpritesU32)**
-- Download the sprites: [860-otcv-revisado2.rar](https://www.mediafire.com/file/iyas69j0sanddyr/860-otcv-revisado2.rar/file)
+- Download the sprites: [Octv8--Classic-8.6](https://github.com/Mateuzkl/Octv8--Classic-8.6)
 - Extract `.spr` and `.dat` to your OTCv8 directory.
 
 > **Client With DLL (Mounts)**: [Download Client 8.60 + DLL](https://github.com/Mateuzkl/Client-cip-8.60-with-DLL-Mount).*
