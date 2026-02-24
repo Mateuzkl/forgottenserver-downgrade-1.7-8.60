@@ -49,7 +49,9 @@ function loginMessage.onLogin(player)
     elseif not promotion then
         player:setVocation(vocation:getDemotion())
     end
-
+	 -- Update Experience Rate Stamina
+    player:updateStamina()
+	
     player:registerEvent("logoutMessage")
 
     if configManager.getBoolean(RESET_SYSTEM_ENABLED) then
