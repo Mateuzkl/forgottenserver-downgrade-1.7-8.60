@@ -498,15 +498,9 @@ void ProtocolGame::disconnectClient(std::string_view message) const
 
 void ProtocolGame::writeToOutputBuffer(const NetworkMessage& msg, bool broadcast/* = true*/)
 {
-	const uint8_t opcode = msg.getBuffer()[NetworkMessage::INITIAL_BUFFER_POSITION];
-	const bool isMapOrMoveOpcode = (opcode == 0x64 || opcode == 0x4B || opcode == 0x6C || opcode == 0x6D || opcode == 0x65 ||
-	                               opcode == 0x66 || opcode == 0x67 || opcode == 0x68);
 	if(player && broadcast && player->isLiveCasting()) {
 		for(auto& spectator : player->spectators) {
 			if(spectator && spectator->acceptPackets) {
-				if (!spectator->isOTCv8 && isMapOrMoveOpcode) {
-					continue;
-				}
 				spectator->writeToOutputBuffer(msg);
 			}
 		}

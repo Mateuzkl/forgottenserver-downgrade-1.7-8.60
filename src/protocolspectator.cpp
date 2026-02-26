@@ -239,14 +239,11 @@ void ProtocolSpectator::onRecvFirstMessage(NetworkMessage& msg)
 	}
 
 	// OTCv8 version detection
-	{
-		const size_t remainingBytes = msg.getLength() - msg.getBufferPosition();
-		if (remainingBytes >= (sizeof(uint16_t) + 5 + sizeof(uint16_t))) {
-			uint16_t otcV8StringLength = msg.get<uint16_t>();
-			if (otcV8StringLength == 5 && msg.getString(5) == "OTCv8") {
-				isOTCv8 = true;
-				msg.get<uint16_t>();
-			}
+	if (msg.getBufferPosition() < msg.getLength()) {
+		uint16_t otcV8StringLength = msg.get<uint16_t>();
+		if (otcV8StringLength == 5 && msg.getString(5) == "OTCv8") {
+			isOTCv8 = true;
+			msg.get<uint16_t>();
 		}
 	}
 
@@ -1014,7 +1011,7 @@ void ProtocolSpectator::sendMapDescription(const Position& pos)
 	} else {
 		NetworkMessage msg;
 		msg.addByte(0x64);
-		msg.addPosition(pos);
+		msg.addPosition(caster->getPosition());
 		GetMapDescription(pos.x - awareRange.left(), pos.y - awareRange.top(), pos.z, awareRange.horizontal(), awareRange.vertical(), msg);
 		writeToOutputBuffer(msg);
 	}
@@ -1116,19 +1113,7 @@ void ProtocolSpectator::sendMoveCreature(const Creature* creature, const Positio
 		return;
 	}
 
-	if (!isOTCv8) {
-		NetworkMessage msg;
-		if (oldStackPos >= 0 && oldStackPos < MAX_STACKPOS_THINGS) {
-			msg.addByte(0x6C);
-			msg.addPosition(oldPos);
-			msg.addByte(static_cast<uint8_t>(oldStackPos));
-			writeToOutputBuffer(msg);
-		}
-		sendMapDescription(newPos);
-		return;
-	}
-
-	if (teleport || oldPos.z != newPos.z || oldStackPos >= MAX_STACKPOS_THINGS) {
+	if (teleport || oldPos.z != newPos.z || oldStackPos >= 10) {
 		NetworkMessage msg;
 		msg.addByte(0x6C);
 		msg.addPosition(oldPos);
