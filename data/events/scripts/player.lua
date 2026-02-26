@@ -81,7 +81,10 @@ function Player:onTradeCompleted(target, item, targetItem, isSuccess)
 end
 
 function Player:onGainExperience(source, exp, rawExp, sendText)
-	return hasEvent.onGainExperience and math.floor(Event.onGainExperience(self, source, exp, rawExp, sendText)) or exp
+	if hasEvent.onGainExperience then
+		exp = math.floor(Event.onGainExperience(self, source, exp, rawExp, sendText))
+	end
+	return math.max(0, exp)
 end
 
 function Player:onLoseExperience(exp)

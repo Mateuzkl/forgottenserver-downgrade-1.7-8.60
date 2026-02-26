@@ -30,7 +30,7 @@ function talk.onSay(player, words, param)
 	player:getPosition():sendMagicEffect(CONST_ME_TELEPORT)
 
 	local reduction = player:getResetExpReduction()
-	player:setExperienceRate(ExperienceRateType.STAMINA, reduction)
+	player:setExperienceRate(ExperienceRateType.BASE, math.floor(reduction * 100))
 
 	player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "You have performed a reset! Total resets: " .. player:getResetCount() .. ".")
 	return false

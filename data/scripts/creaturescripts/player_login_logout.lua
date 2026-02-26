@@ -44,11 +44,9 @@ function loginMessage.onLogin(player)
     local promotion = vocation:getPromotion()
     if player:isPremium() then
         local value = player:getStorageValue(PlayerStorageKeys.promotion)
-        if value and value == 1 then
+        if value and value == 1 and promotion then
             player:setVocation(promotion)
         end
-    elseif not promotion then
-        player:setVocation(vocation:getDemotion())
     end
 
      -- Update Experience Rate Stamina
@@ -58,7 +56,7 @@ function loginMessage.onLogin(player)
 
     if configManager.getBoolean(RESET_SYSTEM_ENABLED) then
         local reductionMultiplier = player:getResetExpReduction()
-        player:setExperienceRate(ExperienceRateType.STAMINA, reductionMultiplier)
+        player:setExperienceRate(ExperienceRateType.BASE, math.floor(reductionMultiplier * 100))
     end
 
     -- Events
