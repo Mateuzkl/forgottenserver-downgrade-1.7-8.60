@@ -658,11 +658,6 @@ void ProtocolSpectator::checkCreatureAsKnown(uint32_t id, bool& known, uint32_t&
 	}
 }
 
-void ProtocolSpectator::removeKnownCreature(uint32_t creatureId)
-{
-	knownCreatureSet.erase(creatureId);
-}
-
 bool ProtocolSpectator::canSee(const Creature* c) const
 {
 	if (!c || !caster || c->isRemoved()) {
@@ -1107,46 +1102,25 @@ void ProtocolSpectator::sendAddCreature(const Creature* creature, const Position
 	// sendBasicData(); // Not needed for 8.60 or might be incorrect
 }
 
-void ProtocolSpectator::sendMoveCreature(const Creature* creature, const Position& newPos, int32_t /*newStackPos*/, const Position& oldPos, int32_t oldStackPos, bool teleport)
+void ProtocolSpectator::sendMoveCreature(const Creature*, const Position& newPos, int32_t, const Position& oldPos, int32_t oldStackPos, bool)
 {
-	if (creature != caster) {
-		return;
-	}
-
-	if (teleport || oldPos.z != newPos.z || oldStackPos >= 10) {
-		NetworkMessage msg;
-		msg.addByte(0x6C);
-		msg.addPosition(oldPos);
-		msg.addByte(static_cast<uint8_t>(oldStackPos));
-		writeToOutputBuffer(msg);
-		sendMapDescription(newPos);
-		return;
-	}
-
 	NetworkMessage msg;
+
 	msg.addByte(0x6D);
 	msg.addPosition(oldPos);
-	msg.addByte(static_cast<uint8_t>(oldStackPos));
+	msg.addByte(oldStackPos);
 	msg.addPosition(newPos);
 
-	if (oldPos.y > newPos.y) {
+	if (oldPos.y > newPos.y) { // north, for old x
 		msg.addByte(0x65);
-		GetMapDescription(oldPos.x - awareRange.left(), newPos.y - awareRange.top(), newPos.z,
-		                  awareRange.horizontal(), 1, msg);
-	} else if (oldPos.y < newPos.y) {
+	} else if (oldPos.y < newPos.y) { // south, for old x
 		msg.addByte(0x67);
-		GetMapDescription(oldPos.x - awareRange.left(), newPos.y + awareRange.bottom(),
-		                  newPos.z, awareRange.horizontal(), 1, msg);
 	}
 
-	if (oldPos.x < newPos.x) {
+	if (oldPos.x < newPos.x) { // east, [with new y]
 		msg.addByte(0x66);
-		GetMapDescription(newPos.x + awareRange.right(), newPos.y - awareRange.top(),
-		                  newPos.z, 1, awareRange.vertical(), msg);
-	} else if (oldPos.x > newPos.x) {
+	} else if (oldPos.x > newPos.x) { // west, [with new y]
 		msg.addByte(0x68);
-		GetMapDescription(newPos.x - awareRange.left(), newPos.y - awareRange.top(), newPos.z,
-		                  1, awareRange.vertical(), msg);
 	}
 	writeToOutputBuffer(msg);
 }

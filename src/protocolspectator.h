@@ -55,13 +55,6 @@ class ProtocolSpectator final : public ProtocolGame
 			return version;
 		}
 
-		// Known creature management - fix for creature desync bug
-		void removeKnownCreature(uint32_t creatureId);
-		
-		bool isAcceptingPackets() const {
-			return acceptPackets;
-		}
-
 	private:
 		ProtocolSpectator_ptr getThis() {
 			return std::static_pointer_cast<ProtocolSpectator>(shared_from_this());
