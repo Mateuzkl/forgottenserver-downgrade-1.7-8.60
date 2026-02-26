@@ -35,14 +35,6 @@ Creature::~Creature()
 
 bool Creature::canSee(const Position& myPos, const Position& pos, int32_t viewRangeX, int32_t viewRangeY)
 {
-	if (viewRangeX <= 0) {
-		viewRangeX = Map::maxViewportX;
-	}
-
-	if (viewRangeY <= 0) {
-		viewRangeY = Map::maxViewportY;
-	}
-
 	if (myPos.z <= 7) {
 		// we are on ground level or above (7 -> 0)
 		// view is from 7 -> 0
