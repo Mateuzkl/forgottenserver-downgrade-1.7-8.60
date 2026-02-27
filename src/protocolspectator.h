@@ -103,10 +103,6 @@ private:
 	void sendTextMessage(MessageClasses mclass, const std::string& message);
 
 	void sendFeatures();
-	void sendFloorDescription(const Position& pos, int floor);
-	void parseChangeAwareRange(NetworkMessage& msg);
-	void updateAwareRange(int width, int height);
-	void sendAwareRange();
 
 	void sendSkills();
 	void sendCreatureTurn(const Creature* creature, uint32_t stackpos);
@@ -187,18 +183,6 @@ private:
 	bool isOTCv8 = false;
 	bool debugAssertSent = false;
 	bool acceptPackets = false;
-	struct AwareRange
-	{
-		int width = 17;
-		int height = 13;
-
-		int left() const { return width / 2; }
-		int right() const { return 1 + width / 2; }
-		int top() const { return height / 2; }
-		int bottom() const { return 1 + height / 2; }
-		int horizontal() const { return width + 1; }
-		int vertical() const { return height + 1; }
-	} awareRange;
 };
 
 #endif
