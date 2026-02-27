@@ -45,7 +45,7 @@ void ProtocolSpectator::release()
 
 	if (caster) {
 		caster->removeSpectator(this);
-		if (player && caster->isLiveCasting() && acceptPackets) {
+		if (player && caster->isLiveCasting()) {
 			std::stringstream ss;
 			ss << player->getName() << " has left the cast.";
 			caster->sendChannelMessage("", ss.str(), TALKTYPE_CHANNEL_O, CHANNEL_CAST);
@@ -176,6 +176,7 @@ void ProtocolSpectator::connect(uint32_t playerId, OperatingSystem_t operatingSy
 	caster->addSpectator(this);
 
 	player->client = getThis();
+	sendAddCreature(caster, caster->getPosition(), 0, false);
 	player->lastIP = player->getIP();
 	acceptPackets = true;
 
@@ -185,9 +186,6 @@ void ProtocolSpectator::connect(uint32_t playerId, OperatingSystem_t operatingSy
 	msg.add<uint16_t>(CHANNEL_CAST);
 	msg.addString("Live Cast");
 	writeToOutputBuffer(msg);
-
-	// Now send the creature and map
-	sendAddCreature(caster, caster->getPosition(), 0, false);
 
 	// Notify everyone that spectator joined
 	std::stringstream ss;
@@ -238,14 +236,11 @@ void ProtocolSpectator::onRecvFirstMessage(NetworkMessage& msg)
 	}
 
 	// OTCv8 version detection
-	{
-		const size_t remainingBytes = msg.getLength() - msg.getBufferPosition();
-		if (remainingBytes >= (sizeof(uint16_t) + 5 + sizeof(uint16_t))) {
-			uint16_t otcV8StringLength = msg.get<uint16_t>();
-			if (otcV8StringLength == 5 && msg.getString(5) == "OTCv8") {
-				isOTCv8 = true;
-				msg.get<uint16_t>();
-			}
+	if (msg.getBufferPosition() < msg.getLength()) {
+		uint16_t otcV8StringLength = msg.get<uint16_t>();
+		if (otcV8StringLength == 5 && msg.getString(5) == "OTCv8") {
+			isOTCv8 = true;
+			msg.get<uint16_t>();
 		}
 	}
 

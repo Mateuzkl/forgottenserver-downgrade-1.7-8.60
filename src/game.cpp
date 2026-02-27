@@ -17,8 +17,6 @@
 #include "items.h"
 #include "monster.h"
 #include "movement.h"
-#include "protocolgame.h"
-#include "protocolspectator.h"
 #include "pugicast.h"
 #include "decay.h"
 #include "scheduler.h"
@@ -586,21 +584,10 @@ bool Game::removeCreature(Creature* creature, bool isLogout /* = true*/)
 
 	// send to client
 	size_t i = 0;
-	uint32_t creatureId = creature->getID();
 	for (Creature* spectator : spectators) {
 		if (Player* player = spectator->getPlayer()) {
 			if (player->canSeeCreature(creature)) {
 				player->sendRemoveTileThing(tilePosition, oldStackPosVector[i++]);
-				if (player->client) {
-					player->client->removeKnownCreature(creatureId);
-					if (player->isLiveCasting()) {
-						for (auto& castSpectator : player->spectators) {
-							if (castSpectator && castSpectator->isAcceptingPackets()) {
-								castSpectator->removeKnownCreature(creatureId);
-							}
-						}
-					}
-				}
 			}
 		}
 	}
