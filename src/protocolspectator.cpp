@@ -1056,6 +1056,12 @@ void ProtocolSpectator::sendMoveCreature(const Creature*, const Position& newPos
 	msg.addByte(oldStackPos);
 	msg.addPosition(newPos);
 
+	if (newPos.z > oldPos.z) {
+		MoveDownCreature(msg, newPos, oldPos);
+	} else if (newPos.z < oldPos.z) {
+		MoveUpCreature(msg, newPos, oldPos);
+	}
+
 	if (oldPos.y > newPos.y) { // north, for old x
 		msg.addByte(0x65);
 	} else if (oldPos.y < newPos.y) { // south, for old x
@@ -1068,6 +1074,95 @@ void ProtocolSpectator::sendMoveCreature(const Creature*, const Position& newPos
 		msg.addByte(0x68);
 	}
 	writeToOutputBuffer(msg);
+}
+
+void ProtocolSpectator::MoveDownCreature(NetworkMessage& msg, const Position& newPos,
+                                    const Position& oldPos)
+{
+	// floor change down
+	msg.addByte(0xBF);
+
+	// going from surface to underground
+	if (newPos.z == 8) {
+		int32_t skip = -1;
+
+		for (int i = 0; i < 3; ++i) {
+			GetFloorDescription(msg, oldPos.x - Map::maxClientViewportX, oldPos.y - Map::maxClientViewportY,
+			                    newPos.z + i, (Map::maxClientViewportX * 2) + 2, (Map::maxClientViewportY * 2) + 2,
+			                    -i - 1, skip);
+		}
+		if (skip >= 0) {
+			msg.addByte(static_cast<uint8_t>(skip));
+			msg.addByte(0xFF);
+		}
+	}
+	// going further down
+	else if (newPos.z > oldPos.z && newPos.z > 8 && newPos.z < 14) {
+		int32_t skip = -1;
+		GetFloorDescription(msg, oldPos.x - Map::maxClientViewportX, oldPos.y - Map::maxClientViewportY, newPos.z + 2,
+		                    (Map::maxClientViewportX * 2) + 2, (Map::maxClientViewportY * 2) + 2, -3, skip);
+
+		if (skip >= 0) {
+			msg.addByte(static_cast<uint8_t>(skip));
+			msg.addByte(0xFF);
+		}
+	}
+
+	// moving down a floor makes us out of sync
+	// east
+	msg.addByte(0x66);
+	GetMapDescription(oldPos.x + (Map::maxClientViewportX + 1), oldPos.y - (Map::maxClientViewportY + 1), newPos.z, 1,
+	                  (Map::maxClientViewportY * 2) + 2, msg);
+
+	// south
+	msg.addByte(0x67);
+	GetMapDescription(oldPos.x - Map::maxClientViewportX, oldPos.y + (Map::maxClientViewportY + 1), newPos.z,
+	                  (Map::maxClientViewportX * 2) + 2, 1, msg);
+}
+
+void ProtocolSpectator::MoveUpCreature(NetworkMessage& msg, const Position& newPos,
+                                  const Position& oldPos)
+{
+	// floor change up
+	msg.addByte(0xBE);
+
+	// going to surface
+	if (newPos.z == 7) {
+		int32_t skip = -1;
+
+		// floor 7 and 6 already set
+		for (int i = 5; i >= 0; --i) {
+			GetFloorDescription(msg, oldPos.x - Map::maxClientViewportX, oldPos.y - Map::maxClientViewportY, i,
+			                    (Map::maxClientViewportX * 2) + 2, (Map::maxClientViewportY * 2) + 2, 8 - i, skip);
+		}
+		if (skip >= 0) {
+			msg.addByte(static_cast<uint8_t>(skip));
+			msg.addByte(0xFF);
+		}
+	}
+	// underground, going one floor up (still underground)
+	else if (newPos.z > 7) {
+		int32_t skip = -1;
+		GetFloorDescription(msg, oldPos.x - Map::maxClientViewportX, oldPos.y - Map::maxClientViewportY,
+		                    oldPos.getZ() - 3, (Map::maxClientViewportX * 2) + 2, (Map::maxClientViewportY * 2) + 2, 3,
+		                    skip);
+
+		if (skip >= 0) {
+			msg.addByte(static_cast<uint8_t>(skip));
+			msg.addByte(0xFF);
+		}
+	}
+
+	// moving up a floor up makes us out of sync
+	// west
+	msg.addByte(0x68);
+	GetMapDescription(oldPos.x - Map::maxClientViewportX, oldPos.y - (Map::maxClientViewportY - 1), newPos.z, 1,
+	                  (Map::maxClientViewportY * 2) + 2, msg);
+
+	// north
+	msg.addByte(0x65);
+	GetMapDescription(oldPos.x - Map::maxClientViewportX, oldPos.y - Map::maxClientViewportY, newPos.z,
+	                  (Map::maxClientViewportX * 2) + 2, 1, msg);
 }
 
 void ProtocolSpectator::sendInventoryItem(slots_t slot, const Item* item)

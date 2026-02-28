@@ -126,6 +126,8 @@ private:
 	void sendAddTileCreature(const Creature* creature, const Position& pos, int32_t stackpos);
 	void sendMoveCreature(const Creature* creature, const Position& newPos, int32_t newStackPos, const Position& oldPos,
 	                      int32_t oldStackPos, bool teleport);
+	void MoveDownCreature(NetworkMessage& msg, const Position& newPos, const Position& oldPos);
+	void MoveUpCreature(NetworkMessage& msg, const Position& newPos, const Position& oldPos);
 
 	void sendContainer(uint8_t cid, const Container* container, bool hasParent, uint16_t firstIndex);
 
