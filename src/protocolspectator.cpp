@@ -1046,34 +1046,52 @@ void ProtocolSpectator::sendAddTileCreature(const Creature* creature, const Posi
 	}
 }
 
-void ProtocolSpectator::sendMoveCreature(const Creature*, const Position& newPos, int32_t, const Position& oldPos,
-                                         int32_t oldStackPos, bool)
+void ProtocolSpectator::sendMoveCreature(const Creature* creature, const Position& newPos, int32_t newStackPos,
+                                    const Position& oldPos, int32_t oldStackPos, bool teleport)
 {
-	NetworkMessage msg;
+	if (canSee(oldPos) && canSee(creature->getPosition())) {
+		if (teleport || (oldPos.z == 7 && newPos.z >= 8) || oldStackPos >= MAX_STACKPOS_THINGS) {
+			sendRemoveTileThing(oldPos, oldStackPos);
+			sendAddCreature(creature, newPos, newStackPos, 0);
+		} else {
+			NetworkMessage msg;
+			msg.addByte(0x6D);
+			msg.addPosition(oldPos);
+			msg.addByte(static_cast<uint8_t>(oldStackPos));
+			msg.addPosition(newPos);
 
-	msg.addByte(0x6D);
-	msg.addPosition(oldPos);
-	msg.addByte(oldStackPos);
-	msg.addPosition(newPos);
+			if (newPos.z > oldPos.z) {
+				MoveDownCreature(msg, newPos, oldPos);
+			} else if (newPos.z < oldPos.z) {
+				MoveUpCreature(msg, newPos, oldPos);
+			}
 
-	if (newPos.z > oldPos.z) {
-		MoveDownCreature(msg, newPos, oldPos);
-	} else if (newPos.z < oldPos.z) {
-		MoveUpCreature(msg, newPos, oldPos);
+			if (oldPos.y > newPos.y) {
+				msg.addByte(0x65);
+				GetMapDescription(oldPos.x - Map::maxClientViewportX, newPos.y - Map::maxClientViewportY, newPos.z,
+				                  (Map::maxClientViewportX * 2) + 2, 1, msg);
+			} else if (oldPos.y < newPos.y) {
+				msg.addByte(0x67);
+				GetMapDescription(oldPos.x - Map::maxClientViewportX, newPos.y + (Map::maxClientViewportY + 1),
+				                  newPos.z, (Map::maxClientViewportX * 2) + 2, 1, msg);
+			}
+
+			if (oldPos.x < newPos.x) {
+				msg.addByte(0x66);
+				GetMapDescription(newPos.x + (Map::maxClientViewportX + 1), newPos.y - Map::maxClientViewportY,
+				                  newPos.z, 1, (Map::maxClientViewportY * 2) + 2, msg);
+			} else if (oldPos.x > newPos.x) {
+				msg.addByte(0x68);
+				GetMapDescription(newPos.x - Map::maxClientViewportX, newPos.y - Map::maxClientViewportY, newPos.z,
+				                  1, (Map::maxClientViewportY * 2) + 2, msg);
+			}
+			writeToOutputBuffer(msg);
+		}
+	} else if (canSee(oldPos)) {
+		sendRemoveTileThing(oldPos, oldStackPos);
+	} else if (canSee(creature->getPosition())) {
+		sendAddCreature(creature, newPos, newStackPos, 0);
 	}
-
-	if (oldPos.y > newPos.y) { // north, for old x
-		msg.addByte(0x65);
-	} else if (oldPos.y < newPos.y) { // south, for old x
-		msg.addByte(0x67);
-	}
-
-	if (oldPos.x < newPos.x) { // east, [with new y]
-		msg.addByte(0x66);
-	} else if (oldPos.x > newPos.x) { // west, [with new y]
-		msg.addByte(0x68);
-	}
-	writeToOutputBuffer(msg);
 }
 
 void ProtocolSpectator::MoveDownCreature(NetworkMessage& msg, const Position& newPos,
