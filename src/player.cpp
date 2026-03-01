@@ -63,80 +63,6 @@ Player::~Player()
 	setEditHouse(nullptr);
 }
 
-void Player::addSpectator(ProtocolSpectator* spectator) {
-	spectators.push_back(spectator);
-	spectatorCount++;
-	
-	std::ostringstream query;
-	query << "UPDATE `players_online` SET `cast_spectators` = '" << spectatorCount << "' WHERE `player_id` = '" << getGUID() << "';";
-	Database::getInstance().executeQuery(query.str()); 
-}
-
-void Player::removeSpectator(ProtocolSpectator* spectator) {
-	spectators.erase(std::remove(spectators.begin(), spectators.end(), spectator), spectators.end());
-	spectatorCount--;
-	
-	std::ostringstream query;
-	query << "UPDATE `players_online` SET `cast_spectators` = '" << spectatorCount << "' WHERE `player_id` = '" << getGUID() << "';";
-	Database::getInstance().executeQuery(query.str());
-}
-
-bool Player::startLiveCasting(const std::string& password) {
-	liveCasting = true;
-
-	castPassword = password;
-
-	sendChannel(CHANNEL_CAST, "Live Cast");
-
-	Database& db = Database::getInstance();
-
-	std::ostringstream query;
-	query << "UPDATE `players_online` SET `cast_password` = " << db.escapeString(password) << " WHERE `player_id` = " << getGUID() << ";";
-	db.executeQuery(query.str());
-
-	g_game.addLiveCaster(this);
-
-	if (getBoolean(ConfigManager::CAST_EXP_BONUS)) {
-		if (castPassword.empty() && !castExpBonusActive) {
-			castExpBonusActive = true;
-			int32_t bonusPercent = getInteger(ConfigManager::CAST_EXP_BONUS_PERCENT);
-			std::string msg = fmt::format("You received +{}% experience bonus for casting. Good luck!", bonusPercent);
-			if (client) {
-				client->sendTextMessage(TextMessage(MESSAGE_STATUS_CONSOLE_BLUE, msg), false);
-			}
-		} else if (!castPassword.empty() && castExpBonusActive) {
-			castExpBonusActive = false;
-			if (client) {
-				client->sendTextMessage(TextMessage(MESSAGE_STATUS_CONSOLE_BLUE, "Experience bonus removed."), false);
-			}
-		}
-	}
-
-	return isLiveCasting();
-}
-
-bool Player::stopLiveCasting() {
-	liveCasting = false;
-	castPassword = "";
-
-	std::vector<ProtocolSpectator*> spectatorsCopy = spectators;
-	for(ProtocolSpectator* spectator : spectatorsCopy) {
-		if (spectator) {
-			spectator->disconnect();
-		}
-	}
-	spectators.clear();
-	spectatorCount = 0;
-
-	std::ostringstream query;
-	query << "UPDATE `players_online` SET `cast_password` = NULL, `cast_spectators` = '0' WHERE `player_id` = '" << getGUID() << "';";
-	Database::getInstance().executeQuery(query.str());
-
-	g_game.removeLiveCaster(this);
-
-	return isLiveCasting() == false;
-}
-
 bool Player::setVocation(uint16_t vocId)
 {
 	Vocation* voc = g_vocations.getVocation(vocId);
@@ -1685,13 +1611,6 @@ void Player::onThink(uint32_t interval)
 		if (client) {
 			client->sendPing();
 		}
-		if (isLiveCasting()) {
-			for (auto& spectator : spectators) {
-				if (spectator && spectator->acceptPackets) {
-					spectator->sendPing();
-				}
-			}
-		}
 	}
 
 	if (client && !client->isOTCv8 && getBoolean(ConfigManager::DLL_CHECK_KICK)) {
@@ -1699,24 +1618,11 @@ void Player::onThink(uint32_t interval)
 		if (timeNow - lastDllCheck >= checkInterval) {
 			lastDllCheck = timeNow;
 			client->sendDllCheck();
-			
-			if (isLiveCasting()) {
-				for (auto& spectator : spectators) {
-					if (spectator && spectator->acceptPackets && !spectator->isOTCv8) {
-						spectator->sendDllCheck();
-					}
-				}
-			}
 		}
-	} else if (isLiveCasting() && getBoolean(ConfigManager::DLL_CHECK_KICK)) {
+	} else if (getBoolean(ConfigManager::DLL_CHECK_KICK)) {
 		int64_t checkInterval = getInteger(ConfigManager::DLL_CHECK_KICK_TIME) * 1000;
 		if (timeNow - lastDllCheck >= checkInterval) {
 			lastDllCheck = timeNow;
-			for (auto& spectator : spectators) {
-				if (spectator && spectator->acceptPackets && !spectator->isOTCv8) {
-					spectator->sendDllCheck();
-				}
-			}
 		}
 	}
 
@@ -1726,7 +1632,7 @@ void Player::onThink(uint32_t interval)
 		addMessageBuffer();
 	}
 
-	if (!getTile()->hasFlag(TILESTATE_NOLOGOUT) && !isAccessPlayer() && !isSpectator) {
+	if (!getTile()->hasFlag(TILESTATE_NOLOGOUT) && !isAccessPlayer()) {
 		idleTime += interval;
 		const int32_t kickAfterMinutes = getInteger(ConfigManager::KICK_AFTER_MINUTES);
 		if (idleTime > (kickAfterMinutes * 60000) + 60000) {
@@ -1932,16 +1838,6 @@ void Player::addExperience(Creature* source, uint64_t exp, bool sendText /* = fa
 	g_events->eventPlayerOnGainExperience(this, source, exp, rawExp, sendText);
 	if (exp == 0) {
 		return;
-	}
-
-	// Cast EXP Bonus
-	if (castExpBonusActive && getBoolean(ConfigManager::CAST_EXP_BONUS)) {
-		int32_t bonusPercent = getInteger(ConfigManager::CAST_EXP_BONUS_PERCENT);
-		uint64_t bonus = (exp * bonusPercent + 99) / 100;
-		if (bonus < 1 && bonusPercent > 0) {
-			bonus = 1;
-		}
-		exp += bonus;
 	}
 
 	experience += exp;

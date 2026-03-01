@@ -13,7 +13,6 @@
 #include "luascript.h"
 #include "protocoladmin.h"
 #include "protocollogin.h"
-#include "protocolspectator.h"
 #include "protocolstatus.h"
 #include "rsa.h"
 #include "scheduler.h"
@@ -225,9 +224,6 @@ void mainLoader(ServiceManager* services)
 	// Game client protocols
 	services->add<ProtocolGame>(static_cast<uint16_t>(getInteger(ConfigManager::GAME_PORT)));
 	services->add<ProtocolLogin>(static_cast<uint16_t>(getInteger(ConfigManager::LOGIN_PORT)));
-
-	// Spectator protocol
-	services->add<ProtocolSpectator>(static_cast<uint16_t>(getInteger(ConfigManager::LIVE_CAST_PORT)));
 
 	// OT protocols
 	services->add<ProtocolStatus>(static_cast<uint16_t>(getInteger(ConfigManager::STATUS_PORT)));

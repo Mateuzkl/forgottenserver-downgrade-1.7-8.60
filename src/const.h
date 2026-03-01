@@ -154,7 +154,6 @@ enum SpeakClasses : uint8_t
 	TALKTYPE_CHANNEL_R2 = 17,  // #d
 	TALKTYPE_MONSTER_SAY = 19,
 	TALKTYPE_MONSTER_YELL = 20,
-	TALKTYPE_SPELL = 21,
 };
 
 enum MessageClasses : uint8_t
@@ -618,7 +617,6 @@ enum GameFeature {
 
 inline constexpr int32_t CHANNEL_GUILD = 0x00;
 inline constexpr int32_t CHANNEL_PARTY = 0x01;
-static constexpr int32_t CHANNEL_CAST = 0x09;
 inline constexpr int32_t CHANNEL_PRIVATE = 0xFFFF;
 
 // Guild rank level constants

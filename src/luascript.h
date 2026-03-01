@@ -474,9 +474,6 @@ private:
 	// global helper declared to satisfy registration in luascript.cpp
 	static int luaTransformToSHA1(lua_State* L);
 
-	static int luaPlayerIsLiveCasting(lua_State* L);
-	static int luaPlayerStartLiveCasting(lua_State* L);
-	static int luaPlayerStopLiveCasting(lua_State* L);
 	static int luaPlayerGetReset(lua_State* L); // reset system
 	static int luaPlayerDoReset(lua_State* L);  // reset system
 	static int luaPlayerSetReset(lua_State* L); // reset system

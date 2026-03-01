@@ -201,24 +201,6 @@ uint32_t IOLoginData::getAccountIdByPlayerId(uint32_t playerId)
 	return result->getNumber<uint32_t>("account_id");
 }
 
-std::vector<LiveCastInfo> IOLoginData::liveCastAuthentication(const std::string& password)
-{
-	std::vector<LiveCastInfo> casts;
-
-	for(Player* caster : g_game.getLiveCasters(password)) {
-		LiveCastInfo info;
-		info.name = caster->getName();
-		info.level = caster->getLevel();
-		info.spectatorCount = caster->getSpectatorCount();
-		casts.push_back(info);
-	}
-
-	std::sort(casts.begin(), casts.end(), [](const LiveCastInfo& a, const LiveCastInfo& b) {
-		return a.name < b.name;
-	});
-	return casts;
-}
-
 AccountType_t IOLoginData::getAccountType(uint32_t accountId)
 {
 	DBResult_ptr result =
@@ -246,7 +228,7 @@ void IOLoginData::updateOnlineStatus(uint32_t guid, bool login)
 	}
 
 	if (login) {
-		Database::getInstance().executeQuery(fmt::format("INSERT INTO `players_online` (`player_id`) VALUES ({:d})", guid));
+		Database::getInstance().executeQuery(fmt::format("INSERT INTO `players_online` VALUES ({:d})", guid));
 	} else {
 		Database::getInstance().executeQuery(
 		    fmt::format("DELETE FROM `players_online` WHERE `player_id` = {:d}", guid));
@@ -891,9 +873,6 @@ bool IOLoginData::addRewardItems(uint32_t playerId, const ItemBlockList& itemLis
 bool IOLoginData::savePlayer(Player* player)
 {
 	AutoStat stat("savePlayer", "full");
-	if(player->isSpectator) {
-		return false;
-	}
 	
 	if (player->isDead()) {
 		player->changeHealth(1);

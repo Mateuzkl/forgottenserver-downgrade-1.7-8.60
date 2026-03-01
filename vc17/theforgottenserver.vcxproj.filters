@@ -79,7 +79,9 @@
     <ClCompile Include="..\src\decay.cpp" />
     <ClCompile Include="..\src\rewardchest.cpp" />
     <ClCompile Include="..\src\logger.cpp" />
-    <ClCompile Include="..\src\protocolspectator.cpp" />
+    <ClCompile Include="..\src\inbox.cpp" />
+    <ClCompile Include="..\src\mapcache.cpp" />
+    <ClCompile Include="..\src\stats.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\luaactions.cpp">
@@ -272,7 +274,9 @@
     <ClInclude Include="..\src\decay.h" />
     <ClInclude Include="..\src\rewardchest.h" />
     <ClInclude Include="..\src\logger.h" />
-    <ClInclude Include="..\src\protocolspectator.h" />
+    <ClInclude Include="..\src\inbox.h" />
+    <ClInclude Include="..\src\mapcache.h" />
+    <ClInclude Include="..\src\stats.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="theforgottenserver.rc" />

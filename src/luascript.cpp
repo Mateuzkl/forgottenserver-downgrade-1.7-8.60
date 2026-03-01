@@ -2062,7 +2062,6 @@ void LuaScriptInterface::registerFunctions()
 	registerEnum(RETURNVALUE_CANONLYUSEONESHIELD);
 	registerEnum(RETURNVALUE_NOPARTYMEMBERSINRANGE);
 	registerEnum(RETURNVALUE_YOUARENOTTHEOWNER);
-	registerEnum(CHANNEL_CAST);
 	registerEnum(RETURNVALUE_TRADEPLAYERFARAWAY);
 	registerEnum(RETURNVALUE_YOUDONTOWNTHISHOUSE);
 	registerEnum(RETURNVALUE_TRADEPLAYERALREADYOWNSAHOUSE);
@@ -2280,9 +2279,6 @@ void LuaScriptInterface::registerFunctions()
 	registerWeapons();
 	registerXML();
 
-	registerMethod("Player", "isLiveCasting", LuaScriptInterface::luaPlayerIsLiveCasting);
-	registerMethod("Player", "startLiveCasting", LuaScriptInterface::luaPlayerStartLiveCasting);
-	registerMethod("Player", "stopLiveCasting", LuaScriptInterface::luaPlayerStopLiveCasting);
 	registerMethod("Player", "getReset", LuaScriptInterface::luaPlayerGetReset); // reset system
 	registerMethod("Player", "doReset", LuaScriptInterface::luaPlayerDoReset); // reset system
 	registerMethod("Player", "setReset", LuaScriptInterface::luaPlayerSetReset); // reset system
@@ -3638,33 +3634,6 @@ void LuaEnvironment::executeTimerEvent(uint32_t eventIndex)
 	for (auto parameter : timerEventDesc.parameters) {
 		luaL_unref(luaState, LUA_REGISTRYINDEX, parameter);
 	}
-}
-
-int LuaScriptInterface::luaPlayerIsLiveCasting(lua_State* L)
-{
-	// player:isLiveCasting()
-	Player* player = Lua::getUserdata<Player>(L, 1);
-	Lua::pushBoolean(L, player->isLiveCasting());
-	return 1;
-}
-
-int LuaScriptInterface::luaPlayerStartLiveCasting(lua_State* L)
-{
-	// player:startLiveCasting(password)
-	Player* player = Lua::getUserdata<Player>(L, 1);
-	std::string password = Lua::getString(L, 2);
-	player->startLiveCasting(password);
-	Lua::pushBoolean(L, player->isLiveCasting());
-	return 1;
-}
-
-int LuaScriptInterface::luaPlayerStopLiveCasting(lua_State* L)
-{
-	// player:stopLiveCasting()
-	Player* player = Lua::getUserdata<Player>(L, 1);
-	player->stopLiveCasting();
-	Lua::pushBoolean(L, player->isLiveCasting() == false);
-	return 1;
 }
 
 int LuaScriptInterface::luaPlayerGetReset(lua_State* L) // reset system

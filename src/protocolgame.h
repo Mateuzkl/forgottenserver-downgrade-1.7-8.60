@@ -40,7 +40,7 @@ struct TextMessage
 inline constexpr auto OTCV8_NAME = "OTCv8";
 inline constexpr auto OTCV8_LENGTH = 5;
 
-class ProtocolGame : public Protocol
+class ProtocolGame final : public Protocol
 {
 public:
 	// static protocol information
@@ -69,9 +69,9 @@ private:
 	ProtocolGame_ptr getThis() { return std::static_pointer_cast<ProtocolGame>(shared_from_this()); }
 	void connect(uint32_t playerId, OperatingSystem_t operatingSystem);
 	void disconnectClient(std::string_view message) const;
-	void writeToOutputBuffer(const NetworkMessage& msg, bool broadcast = true);
+	void writeToOutputBuffer(const NetworkMessage& msg);
 
-	void release();
+	void release() override;
 
 	std::pair<bool, uint32_t> isKnownCreature(uint32_t id);
 
@@ -80,14 +80,13 @@ private:
 	bool canSee(const Position& pos) const;
 
 	// we have all the parse methods
-	void parsePacket(NetworkMessage& msg);
-	void onRecvFirstMessage(NetworkMessage& msg);
-	void onConnect();
+	void parsePacket(NetworkMessage& msg) override;
+	void onRecvFirstMessage(NetworkMessage& msg) override;
+	void onConnect() override;
 
 	// Parse methods
 	void parseAutoWalk(NetworkMessage& msg);
 	void parseSetOutfit(NetworkMessage& msg);
-	void parseExecuteCommand(const std::string& text);
 	void parseSay(NetworkMessage& msg);
 	void parseLookAt(NetworkMessage& msg);
 	void parseLookInBattleList(NetworkMessage& msg);
@@ -138,7 +137,7 @@ private:
 	void parseCloseChannel(NetworkMessage& msg);
 
 	// Send functions
-	void sendChannelMessage(std::string_view author, std::string_view text, SpeakClasses type, uint16_t channel, bool broadcast = true);
+	void sendChannelMessage(std::string_view author, std::string_view text, SpeakClasses type, uint16_t channel);
 	void sendClosePrivate(uint16_t channelId);
 	void sendCreatePrivateChannel(uint16_t channelId, std::string_view channelName);
 	void sendChannelsDialog();
@@ -165,7 +164,6 @@ private:
 	void sendCreatureOutfit(const Creature* creature, const Outfit_t& outfit);
 	void sendStats();
 	void sendTextMessage(const TextMessage& message);
-	void sendTextMessage(const TextMessage& message, bool broadcast);
 	void sendReLoginWindow();
 
 	void sendTutorial(uint8_t tutorialId);
@@ -268,7 +266,6 @@ private:
 	void parseNewPing(NetworkMessage& msg);
 
 	friend class Player;
-	friend class ProtocolSpectator;
 
 	std::unordered_set<uint32_t> knownCreatureSet;
 	Player* player = nullptr;

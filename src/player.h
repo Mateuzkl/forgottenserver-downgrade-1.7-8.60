@@ -15,7 +15,7 @@
 #include "guild.h"
 #include "outfit.h"
 #include "party.h"
-#include "protocolspectator.h"
+#include "protocolgame.h"
 #include "rewardchest.h"
 #include "town.h"
 #include "vocation.h"
@@ -635,11 +635,10 @@ public:
 		}
 	}
 
-	void sendChannelMessage(std::string_view author, std::string_view text, SpeakClasses type, uint16_t channel,
-	                        bool broadcast = true)
+	void sendChannelMessage(std::string_view author, std::string_view text, SpeakClasses type, uint16_t channel)
 	{
 		if (client) {
-			client->sendChannelMessage(author, text, type, channel, broadcast);
+			client->sendChannelMessage(author, text, type, channel);
 		}
 	}
 	void sendCreatureAppear(const Creature* creature, const Position& pos,
@@ -1038,23 +1037,6 @@ public:
 	Container* findNonEmptyContainer(uint16_t itemId);
 	void lootCorpse(Container* container);
 
-	void addSpectator(ProtocolSpectator* spectator);
-	void removeSpectator(ProtocolSpectator* spectator);
-
-	std::vector<ProtocolSpectator*> getSpectators() { return spectators; }
-
-	uint32_t getSpectatorCount() { return spectatorCount; }
-
-	bool hasCastExpBonus() const { return castExpBonusActive; }
-
-	bool isLiveCasting() { return liveCasting; }
-
-	bool stopLiveCasting();
-
-	bool startLiveCasting(const std::string& password);
-
-	bool isSpectating() { return isSpectator; }
-
 	void updateRegeneration();
 
 	void manageAccount(const std::string& text);
@@ -1171,9 +1153,6 @@ private:
 	std::map<uint32_t, DepotChest*> depotChests;
 
 	std::unordered_map<uint16_t, uint8_t> outfits;
-	std::vector<ProtocolSpectator*> spectators;
-	std::vector<Player*> spectatorMutes;
-	std::unordered_map<std::string, uint32_t> spectatorBans;
 	std::unordered_set<uint16_t> mounts;
 	GuildWarVector guildWarVector;
 
@@ -1188,7 +1167,6 @@ private:
 
 	std::string name;
 	std::string guildNick;
-	std::string castPassword;
 
 	Skill skills[SKILL_LAST + 1];
 	LightInfo itemsLight;
@@ -1263,7 +1241,6 @@ private:
 	int32_t offlineTrainingSkill = -1;
 	int32_t offlineTrainingTime = 0;
 	int32_t idleTime = 0;
-	uint32_t spectatorCount = 0;
 
 	uint16_t lastStatsTrainingTime = 0;
 	uint16_t staminaMinutes = 2520;
@@ -1298,13 +1275,9 @@ private:
 	bool addAttackSkillPoint = false;
 	bool randomizeMount = false;
 	bool inventoryAbilities[CONST_SLOT_LAST + 1] = {};
-	bool isSpectator = false;
-	bool liveCasting = false;
-	bool liveChatDisabled = false;
 	bool tokenProtected = false;
 	std::string tokenHash;
 	bool tokenLocked = false;
-	bool castExpBonusActive = false;
 	bool staminaPzActive = false;
 	bool staminaTrainerActive = false;
 
@@ -1346,7 +1319,6 @@ private:
 	friend class Actions;
 	friend class IOLoginData;
 	friend class ProtocolGame;
-	friend class ProtocolSpectator;
 };
 
 #endif
