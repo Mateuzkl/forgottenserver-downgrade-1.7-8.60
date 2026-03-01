@@ -763,17 +763,26 @@ void Monster::setIdle(bool idle)
 
 void Monster::updateIdleStatus()
 {
-	bool idle = false;
-	if (!isSummon() && targetList.empty()) {
-		// check if there are aggressive conditions
-		idle = std::find_if(conditions.begin(), conditions.end(),
-		                    [](Condition* condition) { return condition->isAggressive(); }) == conditions.end();
-	}
+    bool idle = false;
+    if (!isSummon() && targetList.empty()) {
+        if (spawn && !position.isInRange(masterPos, 1, 1)) {
+            idle = false;
+        } else {
+            idle = std::find_if(conditions.begin(), conditions.end(),
+                                [](Condition* condition) { return condition->isAggressive(); }) == conditions.end();
+        }
+    }
 
-	setIdle(idle);
+    setIdle(idle);
 }
 
-void Monster::onAddCondition(ConditionType_t) { updateIdleStatus(); }
+void Monster::onAddCondition(ConditionType_t)
+{
+	updateIdleStatus();
+	if (isMapLoaded) {
+		updateMapCache();
+	}
+}
 
 void Monster::onEndCondition(ConditionType_t type)
 {
@@ -782,6 +791,9 @@ void Monster::onEndCondition(ConditionType_t type)
 	}
 
 	updateIdleStatus();
+	if (isMapLoaded) {
+		updateMapCache();
+	}
 }
 
 void Monster::onThink(uint32_t interval)
@@ -1003,7 +1015,7 @@ bool Monster::canUseAttack(const Position& pos, const Creature* target) const
 }
 
 bool Monster::canUseSpell(const Position& pos, const Position& targetPos, const spellBlock_t& sb, uint32_t interval,
-                          bool& inRange, bool& resetTicks)
+                          bool& inRange, bool& resetTicks) const
 {
 	inRange = true;
 
