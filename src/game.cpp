@@ -43,7 +43,7 @@ extern Monsters g_monsters;
 extern MoveEvents* g_moveEvents;
 extern Weapons* g_weapons;
 extern Scripts* g_scripts;
-extern LuaScriptInterface g_luaEnvironment;
+extern LuaEnvironment g_luaEnvironment;
 
 void Game::start(ServiceManager* manager)
 {
