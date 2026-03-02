@@ -27,6 +27,7 @@
 #include "talkaction.h"
 #include "weapons.h"
 #include "logger.h"
+#include "luascript.h"
 #include <fmt/format.h>
 #include <limits>
 
@@ -42,6 +43,7 @@ extern Monsters g_monsters;
 extern MoveEvents* g_moveEvents;
 extern Weapons* g_weapons;
 extern Scripts* g_scripts;
+extern LuaScriptInterface g_luaEnvironment;
 
 void Game::start(ServiceManager* manager)
 {
@@ -3531,6 +3533,11 @@ void Game::playerSay(uint32_t playerId, uint16_t channelId, SpeakClasses type, s
 				}
 			}
 		}
+	}
+
+	if (channelId == CHANNEL_CAST) {
+		player->client->sendCastMessage(player->getName(), std::string{text}, TALKTYPE_CHANNEL_Y);
+		return;
 	}
 
 	if (!text.empty() && text.front() == '/' && player->isAccessPlayer()) {
