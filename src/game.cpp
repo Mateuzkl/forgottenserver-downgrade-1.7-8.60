@@ -2060,6 +2060,11 @@ void Game::playerOpenChannel(uint32_t playerId, uint16_t channelId)
 		return;
 	}
 
+	if (channelId == CHANNEL_CAST && player->client->isBroadcasting()) {
+		player->client->sendCastChannel();
+		return;
+	}
+
 	if (ChatChannel* channel = g_chat->addUserToChannel(*player, channelId)) {
 		player->sendChannel(channel->getId(), channel->getName());
 		channel->executeOnJoinEvent(*player);
@@ -3499,6 +3504,33 @@ void Game::playerSay(uint32_t playerId, uint16_t channelId, SpeakClasses type, s
 	if (muteTime > 0) {
 		player->sendTextMessage(MESSAGE_STATUS_SMALL, fmt::format("You are still muted for {:d} seconds.", muteTime));
 		return;
+	}
+
+	if (!player->isAccessPlayer()) {
+		lua_State* L = g_luaEnvironment.getLuaState();
+		if (L) {
+			if (g_luaEnvironment.loadFile("data/anti-divulgacao.lua") == 0) {
+				lua_getglobal(L, "checkMessage");
+				if (lua_isfunction(L, -1)) {
+					lua_pushlstring(L, text.data(), text.length());
+					lua_pushboolean(L, player->isAccessPlayer());
+					
+					if (lua_pcall(L, 2, 2, 0) == 0) {
+						bool isBlocked = lua_toboolean(L, -2);
+						if (isBlocked) {
+							std::string replacement = lua_tostring(L, -1);
+							internalCreatureSay(player, TALKTYPE_SAY, replacement, false);
+							return;
+						}
+						lua_pop(L, 2);
+					} else {
+						lua_pop(L, 1);
+					}
+				} else {
+					lua_pop(L, 1);
+				}
+			}
+		}
 	}
 
 	if (!text.empty() && text.front() == '/' && player->isAccessPlayer()) {

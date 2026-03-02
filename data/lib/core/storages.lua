@@ -18,6 +18,9 @@ PlayerStorageKeys = {
     achievementsBase = 300000,
     achievementsCounter = 20000,
     ExerciseDummyExhaust = 30029,
+    isCasting = 30030,
+    isCastingPassword = 30031,
+
 }
 
 

@@ -484,6 +484,7 @@ private:
 	static int luaPlayerIsAutoLootEnabled(lua_State* L);
 	static int luaPlayerClearAutoLoot(lua_State* L);
 
+
 	//
 	std::string lastLuaError;
 

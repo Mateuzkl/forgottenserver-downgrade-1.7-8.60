@@ -6,6 +6,7 @@
 #include "actions.h"
 #include "ban.h"
 #include "configmanager.h"
+#include "creatureevent.h"
 #include "game.h"
 #include "iologindata.h"
 #include "outputmessage.h"
@@ -14,6 +15,9 @@
 #include "scheduler.h"
 
 #include <unordered_set>
+
+uint32_t ProtocolGame::spectatorId = 1;
+std::set<std::string> ProtocolGame::spectatorNames;
 
 extern CreatureEvents* g_creatureEvents;
 extern Chat* g_chat;
@@ -105,8 +109,13 @@ std::size_t clientLogin(const Player& player)
 void ProtocolGame::release()
 {
 	// dispatcher thread
-	if (player && player->client == shared_from_this()) {
-		player->client.reset();
+	if (player) {
+		if (isSpectator) {
+			player->client->removeSpectator(getThis());
+			spectatorNames.erase(asLowerCaseString(spectator_name));
+		} else if (player->client->protocol() == shared_from_this()) {
+			player->client->setOwner(nullptr);
+		}
 		player->decrementReferenceCounter();
 		player = nullptr;
 	}
@@ -270,7 +279,7 @@ void ProtocolGame::login(uint32_t characterId, uint32_t accountId, OperatingSyst
 			return;
 		}
 
-		if (foundPlayer->client) {
+		if (foundPlayer->client->protocol()) {
 			foundPlayer->client->disconnectClient(
 			    "You are already logged in.\nSomeone is trying to access your account?");
 			foundPlayer->client->disconnect();
@@ -287,12 +296,65 @@ void ProtocolGame::login(uint32_t characterId, uint32_t accountId, OperatingSyst
 	OutputMessagePool::getInstance().addProtocolToAutosend(shared_from_this());
 }
 
+void ProtocolGame::spectate(const std::string& name, const std::string& password)
+{
+	//dispatcher thread
+	if (isConnectionExpired()) {
+		return;
+	}
+
+	// OTCv8 features and extended opcodes
+	if (isOTCv8) {
+		sendFeatures();
+		NetworkMessage opcodeMessage;
+		opcodeMessage.addByte(0x32);
+		opcodeMessage.addByte(0x00);
+		opcodeMessage.add<uint16_t>(0x00);
+		writeToOutputBuffer(opcodeMessage);
+	}
+
+	Player* foundPlayer = g_game.getPlayerByName(name);
+	if (!foundPlayer || !foundPlayer->client->isBroadcasting()) {
+		disconnectClient("That cast is not available anymore.");
+		return;
+	}
+
+	if (!foundPlayer->client->password().empty() && asLowerCaseString(foundPlayer->client->password()) != asLowerCaseString(password)) {
+		disconnectClient("Wrong password for that cast.");
+		return;
+	}
+
+	if (foundPlayer->client->isBanned(getIP())) {
+		disconnectClient("You are banned on this cast.");
+		return;
+	}
+
+	player = foundPlayer;
+	player->incrementReferenceCounter();
+	isSpectator = true;
+
+	do {
+		spectator_name = std::string("Spectator_") + std::to_string(spectatorId);
+		spectatorId += 1;
+	} while (spectatorNames.find(asLowerCaseString(spectator_name)) != spectatorNames.end());
+	spectatorNames.insert(asLowerCaseString(spectator_name));
+
+	sendAddCreature(player, player->getPosition(), 0, CONST_ME_NONE);
+	sendCastChannel();
+	syncOpenContainers();
+
+	player->client->addSpectator(getThis());
+	acceptPackets = true;
+
+	OutputMessagePool::getInstance().addProtocolToAutosend(shared_from_this());
+}
+
 void ProtocolGame::connect(uint32_t playerId, OperatingSystem_t operatingSystem)
 {
 	eventConnect = 0;
 
 	Player* foundPlayer = g_game.getPlayerByID(playerId);
-	if (!foundPlayer || foundPlayer->client) {
+	if (!foundPlayer || foundPlayer->client->protocol()) {
 		disconnectClient("You are already logged in.");
 		return;
 	}
@@ -311,7 +373,7 @@ void ProtocolGame::connect(uint32_t playerId, OperatingSystem_t operatingSystem)
 	player->setOperatingSystem(operatingSystem);
 	player->isConnecting = false;
 
-	player->client = getThis();
+	player->client->setOwner(getThis());
 	sendAddCreature(player, player->getPosition(), 0);
 	sendDllCheck();
 	player->lastIP = player->getIP();
@@ -356,6 +418,7 @@ void ProtocolGame::logout(bool displayEffect, bool forced)
 		}
 	}
 
+	player->client->clear();
 	disconnect();
 
 	g_game.removeCreature(player);
@@ -390,11 +453,6 @@ void ProtocolGame::onRecvFirstMessage(NetworkMessage& msg)
 	auto characterName = msg.getString();
 	auto password = msg.getString();
 
-	if (accountName.empty()) {
-		disconnectClient("You must enter your account name.");
-		return;
-	}
-
 	uint32_t timeStamp = msg.get<uint32_t>();
 	uint8_t randNumber = msg.getByte();
 
@@ -428,7 +486,12 @@ void ProtocolGame::onRecvFirstMessage(NetworkMessage& msg)
 	}
 
 	// Authenticate and resolve account/character IDs
-	auto authPair = IOLoginData::gameworldAuthentication(accountName, password, characterName);
+	bool cast = false;
+	auto authPair = IOLoginData::gameworldAuthentication(accountName, password, characterName, cast);
+	if (cast) {
+		g_dispatcher.addTask(createTask(std::bind(&ProtocolGame::spectate, getThis(), std::string(characterName), std::string(password))));
+		return;
+	}
 	uint32_t accountId = authPair.first;
 	uint32_t characterId = authPair.second;
 
@@ -524,6 +587,34 @@ void ProtocolGame::parsePacket(NetworkMessage& msg)
 		if (recvbyte != 0x14) {
 			return;
 		}
+	}
+
+		if (isSpectator) {
+		switch (recvbyte) {
+			case 0x14: g_dispatcher.addTask(createTask(std::bind(&ProtocolGame::disconnect, getThis()))); break;
+			case 0x32:
+				if (isOTCv8) {
+					parseExtendedOpcode(msg);
+				}
+				break; // otclient extended opcode
+			case 0x40:
+				if (isOTCv8) {
+					parseNewPing(msg);
+				}
+				break; // GameClientExtendedPing
+			case 0x6F:
+			case 0x70:
+			case 0x71:
+			case 0x72:
+				g_dispatcher.addTask(createTask(std::bind(&ProtocolGame::spectatorTurn, getThis(), recvbyte - 0x6F)));
+				break;
+			case 0x96: parseSpectatorSay(msg); break;
+			case 0x97: g_dispatcher.addTask(createTask(std::bind(&ProtocolGame::sendCastChannel, getThis()))); break;
+			default:
+				g_dispatcher.addTask(createTask(std::bind(&ProtocolGame::sendCancelWalk, getThis())));
+				break;
+		}
+		return;
 	}
 
 	switch (recvbyte) {
@@ -1581,10 +1672,20 @@ void ProtocolGame::sendChannelsDialog()
 	msg.addByte(0xAB);
 
 	const ChannelList& list = g_chat->getChannelList(*player);
-	msg.addByte(list.size());
-	for (const ChatChannel* channel : list) {
-		msg.add<uint16_t>(channel->getId());
-		msg.addString(channel->getName());
+	if (player && player->client->isBroadcasting()) {
+		msg.addByte(list.size() + 1);
+		msg.add<uint16_t>(CHANNEL_CAST);
+		msg.addString("Cast Channel");
+		for (const ChatChannel* channel : list) {
+			msg.add<uint16_t>(channel->getId());
+			msg.addString(channel->getName());
+		}
+	} else {
+		msg.addByte(list.size());
+		for (const ChatChannel* channel : list) {
+			msg.add<uint16_t>(channel->getId());
+			msg.addString(channel->getName());
+		}
 	}
 
 	writeToOutputBuffer(msg);
@@ -2978,4 +3079,134 @@ void ProtocolGame::sendFeatures()
 		msg.addByte(feature.second ? 1 : 0);
 	}
 	writeToOutputBuffer(msg);
+}
+
+void ProtocolGame::spectatorTurn(uint8_t direction)
+{
+	std::vector<std::string> candidates;
+	candidates.reserve(32);
+
+	for (auto& it : g_game.getPlayers()) {
+		if (it.second->isRemoved() || !it.second->client->protocol())
+			continue;
+
+		if (!it.second->client->isBroadcasting())
+			continue;
+
+		if (!it.second->client->password().empty())
+			continue;
+
+		if (it.second->client->isBanned(getIP()))
+			continue;
+
+		candidates.push_back(it.second->getName());
+	}
+
+	int index = 0;
+	std::sort(candidates.begin(), candidates.end());
+	for (int i = 0; i < (int)candidates.size(); ++i) {
+		if (candidates[i] == player->getName()) {
+			index = i;
+			break;
+		}
+	}
+
+	if (candidates.size() < 2) {
+		return;
+	}
+
+	int dir = 0;
+	if (direction == 0 || direction == 1) {
+		dir = 1;
+	}
+	if (direction == 2 || direction == 3) {
+		dir = -1;
+	}
+	if (index == 0 && dir == -1) {
+		dir = 0;
+	}
+
+	Player* _player = g_game.getPlayerByName(candidates[(index + dir) % candidates.size()]);
+	if (!_player || player == _player) {
+		return;
+	}
+
+	const auto& openedContainers = player->getOpenContainers();
+	for (const auto& it : openedContainers) {
+		sendCloseContainer(it.first);
+	}
+
+	player->client->removeSpectator(getThis());
+	player->decrementReferenceCounter();
+
+	player = _player;
+	player->incrementReferenceCounter();
+
+	knownCreatureSet.clear();
+	sendAddCreature(player, player->getPosition(), 0, CONST_ME_NONE);
+	sendCastChannel();
+	syncOpenContainers();
+
+	player->client->addSpectator(getThis());
+}
+
+void ProtocolGame::parseSpectatorSay(NetworkMessage& msg)
+{
+	std::string receiver;
+	uint16_t channelId;
+
+	SpeakClasses type = static_cast<SpeakClasses>(msg.getByte());
+	switch (type) {
+		case TALKTYPE_PRIVATE:
+		case TALKTYPE_PRIVATE_RED:
+			receiver = msg.getString();
+			channelId = 0;
+			break;
+
+		case TALKTYPE_CHANNEL_Y:
+		case TALKTYPE_CHANNEL_R1:
+		case TALKTYPE_CHANNEL_R2:
+			channelId = msg.get<uint16_t>();
+			break;
+
+		default:
+			channelId = 0;
+			break;
+	}
+
+	const std::string text(msg.getString());
+	if (text.length() > 255) {
+		return;
+	}
+
+	g_dispatcher.addTask(createTask(std::bind(&ProtocolGame::spectatorSay, getThis(), text, channelId)));
+}
+
+void ProtocolGame::spectatorSay(const std::string text, uint16_t channelId)
+{
+	if (channelId != CHANNEL_CAST || !player->client) {
+		return;
+	}
+
+	player->client->spectatorSay(getThis(), text);
+}
+
+void ProtocolGame::sendCastChannel()
+{
+	if (!isOTCv8) {
+		return;
+	}
+
+	sendChannel(CHANNEL_CAST, "Cast Channel");
+}
+
+void ProtocolGame::syncOpenContainers()
+{
+	const auto& openContainers = player->getOpenContainers();
+	for (const auto& it : openContainers) {
+		auto openContainer = it.second;
+		auto container = openContainer.container;
+		bool hasParent = (dynamic_cast<const Container*>(container->getParent()) != nullptr);
+		sendContainer(it.first, container, hasParent, openContainer.index);
+	}
 }
