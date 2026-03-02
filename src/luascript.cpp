@@ -1288,12 +1288,6 @@ void LuaScriptInterface::registerFunctions()
 	registerEnumClass(CallBackParam::TARGETTILE);
 	registerEnumClass(CallBackParam::TARGETCREATURE);
 
-	// Global aliases for backwards compatibility
-	registerGlobalVariable("CALLBACK_PARAM_LEVELMAGICVALUE", static_cast<int64_t>(CallBackParam::LEVELMAGICVALUE));
-	registerGlobalVariable("CALLBACK_PARAM_SKILLVALUE", static_cast<int64_t>(CallBackParam::SKILLVALUE));
-	registerGlobalVariable("CALLBACK_PARAM_TARGETTILE", static_cast<int64_t>(CallBackParam::TARGETTILE));
-	registerGlobalVariable("CALLBACK_PARAM_TARGETCREATURE", static_cast<int64_t>(CallBackParam::TARGETCREATURE));
-
 	// ExperienceRateType
 	registerTable("ExperienceRateType");
 
