@@ -59,7 +59,9 @@ function onUse(player, item, fromPosition, target, toPosition, isHotkey)
 	local tile = Tile(item:getPosition())
 	if tile and tile:getHouse() then
 		if fromPosition.x ~= CONTAINER_POSITION then
+			local kitId = item.itemid
 			item:transform(kit)
+			item:setAttribute(ITEM_ATTRIBUTE_WRAPID, kitId)
 			fromPosition:sendMagicEffect(CONST_ME_POFF)
 		else
 			player:sendTextMessage(MESSAGE_STATUS_SMALL, "Put the construction kit on the floor first.")

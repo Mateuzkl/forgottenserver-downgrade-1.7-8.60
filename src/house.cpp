@@ -322,27 +322,67 @@ bool House::transferToDepot(Player* player) const
 		return false;
 	}
 
-	ItemList moveItemList;
 	for (HouseTile* tile : houseTiles) {
-		if (const TileItemVector* items = tile->getItemList()) {
-			for (Item* item : *items) {
-				if (item->isPickupable()) {
-					moveItemList.push_back(item);
-				} else {
-					Container* container = item->getContainer();
-					if (container) {
-						for (Item* containerItem : container->getItemList()) {
-							moveItemList.push_back(containerItem);
+		const TileItemVector* items = tile->getItemList();
+		if (!items) {
+			continue;
+		}
+
+		std::vector<Item*> toProcess;
+		for (Item* item : *items) {
+			toProcess.push_back(item);
+		}
+
+		for (Item* item : toProcess) {
+			if (Container* container = item->getContainer()) {
+				std::vector<Container*> subContainers = {container};
+				size_t idx = 0;
+				while (idx < subContainers.size()) {
+					Container* current = subContainers[idx++];
+					std::vector<Item*> children;
+					for (Item* child : current->getItemList()) {
+						children.push_back(child);
+					}
+
+					for (Item* child : children) {
+						if (child->hasAttribute(ITEM_ATTRIBUTE_WRAPID)) {
+							uint16_t wrapId = static_cast<uint16_t>(child->getIntAttr(ITEM_ATTRIBUTE_WRAPID));
+							if (wrapId != 0) {
+								g_game.transformItem(child, wrapId);
+							}
+						}
+
+						if (Container* sub = child->getContainer()) {
+							subContainers.push_back(sub);
+						} else if (child->isPickupable()) {
+							g_game.internalMoveItem(child->getParent(), player->getInbox(), INDEX_WHEREEVER, child, child->getItemCount(), nullptr, FLAG_NOLIMIT);
 						}
 					}
 				}
 			}
-		}
-	}
 
-	for (Item* item : moveItemList) {
-		g_game.internalMoveItem(item->getParent(), player->getInbox(), INDEX_WHEREEVER, item, item->getItemCount(), nullptr,
-		                        FLAG_NOLIMIT);
+			Item* processedItem = item;
+			if (processedItem->hasAttribute(ITEM_ATTRIBUTE_WRAPID)) {
+				uint16_t wrapId = static_cast<uint16_t>(processedItem->getIntAttr(ITEM_ATTRIBUTE_WRAPID));
+				if (wrapId != 0) {
+					if (Item* newItem = g_game.transformItem(processedItem, wrapId)) {
+						processedItem = newItem;
+					}
+				}
+			}
+
+			if (processedItem->isPickupable()) {
+				g_game.internalMoveItem(processedItem->getParent(), player->getInbox(), INDEX_WHEREEVER, processedItem, processedItem->getItemCount(), nullptr, FLAG_NOLIMIT);
+			} else if (Container* container = processedItem->getContainer()) {
+				std::vector<Item*> contents;
+				for (Item* content : container->getItemList()) {
+					contents.push_back(content);
+				}
+				for (Item* content : contents) {
+					g_game.internalMoveItem(content->getParent(), player->getInbox(), INDEX_WHEREEVER, content, content->getItemCount(), nullptr, FLAG_NOLIMIT);
+				}
+			}
+		}
 	}
 	return true;
 }
