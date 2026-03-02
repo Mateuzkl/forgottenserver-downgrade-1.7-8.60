@@ -84,11 +84,18 @@ This custom version includes several enhanced systems and fully integrated featu
 
 ### 🐧 Ubuntu 22.04 / 24.04
 
-```bash
-# Install dependencies
-sudo apt install git cmake build-essential libluajit-5.1-dev libmysqlclient-dev libboost-system-dev libboost-iostreams-dev libboost-filesystem-dev libboost-locale-dev libpugixml-dev libfmt-dev libssl-dev libspdlog-dev -y
+> [!IMPORTANT]
+> This project requires **Boost 1.75+** and **Lua 5.4**.
+> - **Ubuntu 24.04**: Recommended (comes with required versions).
+> - **Ubuntu 22.04**: You may need to manually update Boost, as the default version is 1.74.
 
-# Clone and compile
+#### 1. Install dependencies
+```bash
+sudo apt install git cmake build-essential liblua5.4-dev libmysqlclient-dev libboost-system-dev libboost-iostreams-dev libboost-filesystem-dev libboost-locale-dev libboost-regex-dev libpugixml-dev libfmt-dev libssl-dev libspdlog-dev -y
+```
+
+#### 2. Clone and compile
+```bash
 git clone -b Revscrypt-full --single-branch https://github.com/Mateuzkl/forgottenserver-downgrade-1.7-8.60.git
 cd forgottenserver-downgrade-1.7-8.60
 mkdir build && cd build
@@ -126,17 +133,30 @@ if(version >= 860) then
     g_game.enableFeature(GameEnhancedAnimations)
     g_game.enableFeature(GameSpritesU32)
     g_game.enableFeature(GameExtendedClientPing)
-    g_game.enableFeature(GameChangeMapAwareRange)
     g_game.enableFeature(GameDoublePlayerGoodsMoney)
 end
 ```
 
 **2. Extended Sprites (GameSpritesU32)**
-- Download the sprites: [860-otcv-revisado2.rar](https://www.mediafire.com/file/iyas69j0sanddyr/860-otcv-revisado2.rar/file)
+- Download the sprites: [Octv8--Classic-8.6](https://github.com/Mateuzkl/Octv8--Classic-8.6)
 - Extract `.spr` and `.dat` to your OTCv8 directory.
 
 > **Client With DLL (Mounts)**: [Download Client 8.60 + DLL](https://github.com/Mateuzkl/Client-cip-8.60-with-DLL-Mount).*
 
+---
+
+## 🎮 Extended Options for Modified 8.60 CIP Clients
+
+This server supports extended protocol features for **modified 8.60 CIP clients** using DLL patches. These features allow the old Tibia client to handle values beyond the original protocol limitations:
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| `__MAGIC_EFFECTS_U16__` | ✅ OK | Supports magic effects up to 65535 (uint16) instead of 255 |
+| `__DISTANCE_SHOOT_U16__` | ✅ OK | Supports distance/projectile effects up to 65535 (uint16) instead of 255 |
+| `__PLAYER_HEALTH_U32__` | ✅ OK | Supports player health values up to 4.2 billion (uint32) instead of 65535 |
+| `__PLAYER_MANA_U32__` | ✅ OK | Supports player mana values up to 4.2 billion (uint32) instead of 65535 |
+| `__PLAYER_SKILLS_U16__` | ⏳ Pending | Skill levels up to 65535 (requires implementation) |
+| **Outfit Limit Changer** | ✅ OK | Allows more than 255 outfits (uses uint16 for outfit count) |
 ---
 
 ## 🐛 Contributing & Issues
@@ -168,3 +188,27 @@ Basta copiar a chave abaixo e colar no seu banco na opção **Chave Aleatória**
 `f8761afe-5581-417d-afc8-08cac410a1b0`
 
 Agradeço imensamente a quem puder contribuir para manter este projeto vivo e melhorando!
+
+---
+
+## 📥 How to Download the Latest Client (Executable & DLLs) / Client Updater
+
+If you need the ready-to-use **executable** and **DLLs**, follow these simple steps:
+
+1.  **Click this link**: [Project on AppVeyor](https://ci.appveyor.com/project/Mateuzkl/forgottenserver-downgrade-1-7-8-60)
+2.  Look for the **"Artifacts"** tab (or click on the latest Job specific to your platform, often named `Environment: ...` or `Configuration: ...`, then find the "Artifacts" tab there).
+    *   *Note: If you are on the main project page, you might need to click on the latest "Job" listed under "Job name" first.*
+3.  **Download** the files listed there (usually a `.zip` or `.7z` file containing the executable and DLLs).
+4.  **Extract** the downloaded files into your client folder, replacing existing ones if necessary.
+
+---
+
+## 🔄 Client Updater (Automated)
+
+To easily update your client files (CipSoft client, executables, DLLs), follow our simple tutorial: 
+
+*   **[Click here for the Client Updater Tutorial](https://github.com/Mateuzkl/Client_Mout_Updater)**
+
+This guide explains how to automatically update everything with just a few clicks.
+
+
