@@ -968,25 +968,25 @@ std::pair<bool, uint32_t> ProtocolGame::isKnownCreature(uint32_t id)
 	}
 
 	if (knownCreatureSet.size() > 250) {
-		// Look for a creature to remove
-		for (const uint32_t& creatureId : knownCreatureSet) {
-			Creature* creature = g_game.getCreatureByID(creatureId);
+		for (auto it = knownCreatureSet.begin(); it != knownCreatureSet.end(); ++it) {
+			Creature* creature = g_game.getCreatureByID(*it);
 			if (!canSee(creature)) {
-				knownCreatureSet.erase(creatureId);
-				return {false, creatureId};
+				uint32_t removedCreatureId = *it;
+				knownCreatureSet.erase(it);
+				return {false, removedCreatureId};
 			}
 		}
 
-		// Bad situation. Let's just remove anyone.
-		auto creatureId = knownCreatureSet.begin();
-		if (*creatureId == id) {
-			++creatureId;
+		auto it = knownCreatureSet.begin();
+		if (*it == id) {
+			++it;
 		}
 
-		knownCreatureSet.erase(creatureId);
-		return {false, *creatureId};
+		uint32_t removedId = *it;
+		knownCreatureSet.erase(it);
+		return {false, removedId};
 	}
-	return {};
+	return {false, 0};
 }
 
 bool ProtocolGame::canSee(const Creature* c) const

@@ -181,10 +181,11 @@ public:
 		}
 
 		if (logger_) {
+			std::string formattedMsg = fmt::format("[STATS] {}", msg);
 			for (auto& sink : logger_->sinks()) {
 				auto fileSink = std::dynamic_pointer_cast<spdlog::sinks::rotating_file_sink_mt>(sink);
 				if (fileSink) {
-					spdlog::details::log_msg logMsg("tfs", spdlog::level::info, fmt::format("[STATS] {}", msg));
+					spdlog::details::log_msg logMsg("tfs", spdlog::level::info, formattedMsg);
 					fileSink->log(logMsg);
 				}
 			}
@@ -194,18 +195,15 @@ public:
 	void statsWarning(std::string_view msg) override
 	{
 		if (statsWarningLogger_) {
-			// Pattern is [%Y-%m-%d %H:%M:%S.%e] %v
-			// We manualy inject the colored label
 			statsWarningLogger_->info("{} {}", fmt::format(fg(fmt::color::yellow), "[WARNING STATS]"), msg);
 		}
 
-		// Also log to main file if needed, similar to INFO level but with our tag
 		if (logger_) {
+			std::string formattedMsg = fmt::format("[WARNING STATS] {}", msg);
 			for (auto& sink : logger_->sinks()) {
 				auto fileSink = std::dynamic_pointer_cast<spdlog::sinks::rotating_file_sink_mt>(sink);
 				if (fileSink) {
-					// Using info level for file, but tag makes it clear
-					spdlog::details::log_msg logMsg("tfs", spdlog::level::warn, fmt::format("[WARNING STATS] {}", msg));
+					spdlog::details::log_msg logMsg("tfs", spdlog::level::warn, formattedMsg);
 					fileSink->log(logMsg);
 				}
 			}
