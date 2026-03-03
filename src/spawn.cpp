@@ -88,6 +88,7 @@ bool Spawns::loadFromXml(std::string_view filename)
 				sb.direction = DIRECTION_NORTH;
 				sb.interval = interval;
 				sb.lastSpawn = 0;
+				sb.effectInitialInterval = 0;
 
 				for (auto& monsterNode : childNode.children()) {
 					pugi::xml_attribute nameAttribute = monsterNode.attribute("name");
@@ -526,7 +527,8 @@ bool Spawn::addMonster(const std::string& name, const Position& pos, Direction d
 	sb.direction = dir;
 	sb.interval = interval;
 	sb.lastSpawn = 0;
-
+	sb.effectInitialInterval = 0;
+	
 	return addBlock(sb);
 }
 
