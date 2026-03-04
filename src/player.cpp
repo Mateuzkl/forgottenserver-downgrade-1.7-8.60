@@ -1605,6 +1605,17 @@ void Player::onThink(uint32_t interval)
 {
 	Creature::onThink(interval);
 
+	if (client && getIP() == 0) {
+		if (ghostModeStartTime == 0) {
+			ghostModeStartTime = OTSYS_TIME();
+		} else if (OTSYS_TIME() - ghostModeStartTime >= 60000) {
+			kickPlayer(true);
+			return;
+		}
+	} else {
+		ghostModeStartTime = 0;
+	}
+
 	int64_t timeNow = OTSYS_TIME();
 	if (timeNow - lastPing >= 5000) {
 		lastPing = timeNow;
@@ -1613,22 +1624,17 @@ void Player::onThink(uint32_t interval)
 		}
 	}
 
-	if (client && !client->isOTCv8 && getBoolean(ConfigManager::DLL_CHECK_KICK)) {
+	if (client && client->isWaitingForUpdate()) {
+		IOLoginData::updateOnlineStatus(getGUID(), false, client->isBroadcasting(), client->password(), client->description(), client->spectatorList().size());
+		client->setUpdateStatus(false);
+	}
+
+	if (client && !client->isOTCv8 && getIP() != 0 && getBoolean(ConfigManager::DLL_CHECK_KICK)) {
 		int64_t checkInterval = getInteger(ConfigManager::DLL_CHECK_KICK_TIME) * 1000;
 		if (timeNow - lastDllCheck >= checkInterval) {
 			lastDllCheck = timeNow;
 			client->sendDllCheck();
 		}
-	} else if (getBoolean(ConfigManager::DLL_CHECK_KICK)) {
-		int64_t checkInterval = getInteger(ConfigManager::DLL_CHECK_KICK_TIME) * 1000;
-		if (timeNow - lastDllCheck >= checkInterval) {
-			lastDllCheck = timeNow;
-		}
-	}
-
-	if (client->isWaitingForUpdate()) {
-		IOLoginData::updateOnlineStatus(getGUID(), false, client->isBroadcasting(), client->password(), client->description(), client->spectatorList().size());
-		client->setUpdateStatus(false);
 	}
 
 	MessageBufferTicks += interval;
@@ -1637,7 +1643,7 @@ void Player::onThink(uint32_t interval)
 		addMessageBuffer();
 	}
 
-	if (!getTile()->hasFlag(TILESTATE_NOLOGOUT) && !isAccessPlayer()) {
+	if (!getTile()->hasFlag(TILESTATE_NOLOGOUT) && !isAccessPlayer() && !(client && client->protocol() && client->protocol()->isSpectator)) {
 		idleTime += interval;
 		const int32_t kickAfterMinutes = getInteger(ConfigManager::KICK_AFTER_MINUTES);
 		if (idleTime > (kickAfterMinutes * 60000) + 60000) {

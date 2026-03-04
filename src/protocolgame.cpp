@@ -3065,7 +3065,7 @@ void ProtocolGame::parseNewPing(NetworkMessage& msg)
 {
 	uint32_t pingId = msg.get<uint32_t>();
 	if (g_game.getGameState() == GAME_STATE_NORMAL && player) {
-		createTask(([protocol = getThis(), pingId]() { protocol->sendNewPing(pingId); }));
+		g_dispatcher.addTask(createTask(std::bind(&ProtocolGame::sendNewPing, getThis(), pingId)));
 	}
 }
 
