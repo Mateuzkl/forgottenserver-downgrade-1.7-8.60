@@ -111,10 +111,19 @@ void ProtocolGame::release()
 	// dispatcher thread
 	if (player) {
 		if (isSpectator) {
-			player->client->removeSpectator(getThis());
+			auto clientRef = player->client;
+			if (clientRef) {
+				clientRef->removeSpectator(getThis());
+			}
 			spectatorNames.erase(asLowerCaseString(spectator_name));
-		} else if (player->client->protocol() == shared_from_this()) {
-			player->client->setOwner(nullptr);
+		} else {
+			auto clientRef = player->client;
+			if (clientRef) {
+				auto clientProtocol = clientRef->protocol();
+				if (clientProtocol && clientProtocol == shared_from_this()) {
+					clientRef->setOwner(nullptr);
+				}
+			}
 		}
 		player->decrementReferenceCounter();
 		player = nullptr;
@@ -279,11 +288,12 @@ void ProtocolGame::login(uint32_t characterId, uint32_t accountId, OperatingSyst
 			return;
 		}
 
-		if (foundPlayer->client->protocol()) {
-			foundPlayer->client->disconnectClient(
+		auto clientRef = foundPlayer->client;
+		if (clientRef && clientRef->protocol()) {
+			clientRef->disconnectClient(
 			    "You are already logged in.\nSomeone is trying to access your account?");
-			foundPlayer->client->disconnect();
-			foundPlayer->client = nullptr;
+			clientRef->disconnect();
+			clientRef->setOwner(nullptr);
 			g_scheduler.addEvent(
 			    createSchedulerTask(1000, ([=, thisPtr = getThis(), playerID = foundPlayer->getID()]() {
 				                        thisPtr->connect(playerID, operatingSystem);
@@ -314,17 +324,18 @@ void ProtocolGame::spectate(const std::string& name, const std::string& password
 	}
 
 	Player* foundPlayer = g_game.getPlayerByName(name);
-	if (!foundPlayer || !foundPlayer->client->isBroadcasting()) {
+	auto castClient = foundPlayer ? foundPlayer->client : nullptr;
+	if (!foundPlayer || !castClient || !castClient->isBroadcasting()) {
 		disconnectClient("That cast is not available anymore.");
 		return;
 	}
 
-	if (!foundPlayer->client->password().empty() && asLowerCaseString(foundPlayer->client->password()) != asLowerCaseString(password)) {
+	if (!castClient->password().empty() && asLowerCaseString(castClient->password()) != asLowerCaseString(password)) {
 		disconnectClient("Wrong password for that cast.");
 		return;
 	}
 
-	if (foundPlayer->client->isBanned(getIP())) {
+	if (castClient->isBanned(getIP())) {
 		disconnectClient("You are banned on this cast.");
 		return;
 	}
@@ -355,7 +366,13 @@ void ProtocolGame::connect(uint32_t playerId, OperatingSystem_t operatingSystem)
 	eventConnect = 0;
 
 	Player* foundPlayer = g_game.getPlayerByID(playerId);
-	if (!foundPlayer || foundPlayer->client->protocol()) {
+	if (!foundPlayer) {
+		disconnectClient("You are already logged in.");
+		return;
+	}
+
+	auto clientRef = foundPlayer->client;
+	if (clientRef && clientRef->protocol()) {
 		disconnectClient("You are already logged in.");
 		return;
 	}
@@ -374,7 +391,11 @@ void ProtocolGame::connect(uint32_t playerId, OperatingSystem_t operatingSystem)
 	player->setOperatingSystem(operatingSystem);
 	player->isConnecting = false;
 
-	player->client->setOwner(getThis());
+	if (!player->client) {
+		player->client = std::make_shared<ProtocolSpectator>(getThis());
+	} else {
+		player->client->setOwner(getThis());
+	}
 	sendAddCreature(player, player->getPosition(), 0);
 	sendDllCheck();
 	player->lastIP = player->getIP();
