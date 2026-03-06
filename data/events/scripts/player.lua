@@ -85,6 +85,7 @@ function Player:onGainExperience(source, exp, rawExp, sendText)
 		exp = math.floor(Event.onGainExperience(self, source, exp, rawExp, sendText))
 	end
 	return math.max(0, exp)
+	return hasEvent.onGainExperience and math.floor(Event.onGainExperience(self, source, exp, rawExp, sendText)) or exp
 end
 
 function Player:onLoseExperience(exp)

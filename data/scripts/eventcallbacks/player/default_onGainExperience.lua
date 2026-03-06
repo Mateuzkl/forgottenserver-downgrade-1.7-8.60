@@ -5,93 +5,92 @@ soulCondition:setParameter(CONDITION_PARAM_SOULGAIN, 1)
 local event = Event()
 
 function event.onGainExperience(player, source, exp, rawExp, sendText)
-	if not source or source:isPlayer() then return exp end
+    if not source or source:isPlayer() then return exp end
 
-	-- Soul regeneration
-	local vocation = player:getVocation()
-	if player:getSoul() < vocation:getMaxSoul() and exp >= player:getLevel() then
-		soulCondition:setParameter(CONDITION_PARAM_SOULTICKS, vocation:getSoulGainTicks() * 1000)
-		player:addCondition(soulCondition)
-	end
+    -- Soul regeneration
+    local vocation = player:getVocation()
+    if player:getSoul() < vocation:getMaxSoul() and exp >= player:getLevel() then
+        soulCondition:setParameter(CONDITION_PARAM_SOULTICKS, vocation:getSoulGainTicks() * 1000)
+        player:addCondition(soulCondition)
+    end
 
-	-- Apply experience stage multiplier
-	exp = exp * Game.getExperienceStage(player:getLevel())
+    -- Apply experience stage multiplier
+    exp = exp * Game.getExperienceStage(player:getLevel())
 
-	-- Stamina modifier
-	player:updateStamina()
+    -- Stamina modifier
+    player:updateStamina()
 
-	-- Experience Rates
-	local staminaRate = player:getExperienceRate(ExperienceRateType.STAMINA)
-	if staminaRate ~= 100 then exp = exp * staminaRate / 100 end
+    -- Experience Rates
+    local staminaRate = player:getExperienceRate(ExperienceRateType.STAMINA)
+    if staminaRate ~= 100 then exp = exp * staminaRate / 100 end
 
-	local baseRate = player:getExperienceRate(ExperienceRateType.BASE)
-	if baseRate ~= 100 then exp = exp * baseRate / 100 end
+    local baseRate = player:getExperienceRate(ExperienceRateType.BASE)
+    if baseRate ~= 100 then exp = exp * baseRate / 100 end
 
-	local lowLevelRate = player:getExperienceRate(ExperienceRateType.LOW_LEVEL)
-	if lowLevelRate ~= 100 then exp = exp * lowLevelRate / 100 end
+    local lowLevelRate = player:getExperienceRate(ExperienceRateType.LOW_LEVEL)
+    if lowLevelRate ~= 100 then exp = exp * lowLevelRate / 100 end
 
-	local bonusRate = player:getExperienceRate(ExperienceRateType.BONUS)
-	if bonusRate ~= 100 then exp = exp * bonusRate / 100 end
+    local bonusRate = player:getExperienceRate(ExperienceRateType.BONUS)
+    if bonusRate ~= 100 then exp = exp * bonusRate / 100 end
 
-	return exp
+    return exp
 end
 
 event:register()
 
 local message = Event()
-
 local expTracker = {}
 
 function message.onGainExperience(self, source, exp, rawExp, sendText)
-	if sendText and exp ~= 0 then
-		local monsterName = source:getName()
-		local playerId = self:getGuid()
+    if not sendText or exp == 0 then return exp end
 
-		if not expTracker[playerId] then expTracker[playerId] = {} end
-		if not expTracker[playerId][monsterName] then expTracker[playerId][monsterName] = { totalExp = 0, count = 0, timer = 0 } end
+    local monsterName = source and source:getName() or "Unknown"
+    local playerId = self:getGuid()
 
-		expTracker[playerId][monsterName].totalExp = expTracker[playerId][monsterName].totalExp + exp
-		expTracker[playerId][monsterName].count = expTracker[playerId][monsterName].count + 1
-		expTracker[playerId][monsterName].timer = os.time()
+    if not expTracker[playerId] then expTracker[playerId] = {} end
+    if not expTracker[playerId][monsterName] then
+        expTracker[playerId][monsterName] = { totalExp = 0, count = 0, timer = 0 }
+    end
 
-		if not self then return false end
-		addEvent(function()
-			if os.time() - expTracker[playerId][monsterName].timer >= 1 then
-				local expValue = math.floor(expTracker[playerId][monsterName].totalExp + 0.5)
-				local count = expTracker[playerId][monsterName].count
+    expTracker[playerId][monsterName].totalExp = expTracker[playerId][monsterName].totalExp + exp
+    expTracker[playerId][monsterName].count = expTracker[playerId][monsterName].count + 1
+    expTracker[playerId][monsterName].timer = os.time()
 
-				if expValue > 0 then
-					local expString = expValue .. (expValue ~= 1 and " experience points" or " experience point")
+    addEvent(function()
+        if not self:isPlayer() then return end
+        if os.time() - expTracker[playerId][monsterName].timer < 1 then return end
 
-					local message = "You gained " .. expString .. " for killing "
-					if count > 1 then
-						message = message .. count .. " " .. monsterName .. "s."
-					else
-						message = message .. monsterName .. "."
-					end
+        local expValue = math.floor(expTracker[playerId][monsterName].totalExp + 0.5)
+        local count = expTracker[playerId][monsterName].count
 
-					self:sendTextMessage(MESSAGE_STATUS_DEFAULT, message)
-					Game.sendAnimatedText(tostring(expValue), self:getPosition(), 215)
+        if expValue > 0 then
+            local expString = expValue .. (expValue ~= 1 and " experience points" or " experience point")
+            local msg = "You gained " .. expString .. " for killing "
 
-					local spectators = Game.getSpectators(self:getPosition(), false, true)
-					for _, spectator in ipairs(spectators) do
-						if spectator ~= self then
-							spectator:sendTextMessage(MESSAGE_STATUS_DEFAULT,
-								self:getName() ..
-								" gained " ..
-								expString ..
-								" for killing " ..
-								(count > 1 and count .. " " or "") .. monsterName .. (count > 1 and "s" or "") .. ".")
-						end
-					end
-				end
+            if count > 1 then
+                msg = msg .. count .. " " .. monsterName .. "s."
+            else
+                msg = msg .. monsterName .. "."
+            end
 
-				expTracker[playerId][monsterName].totalExp = 0
-				expTracker[playerId][monsterName].count = 0
-			end
-		end, 1000)
-	end
-	return exp
+            self:sendTextMessage(MESSAGE_STATUS_DEFAULT, msg)
+            Game.sendAnimatedText(tostring(expValue), self:getPosition(), 215)
+
+            local spectators = Game.getSpectators(self:getPosition(), false, true)
+            for _, spectator in ipairs(spectators) do
+                if spectator ~= self then
+                    spectator:sendTextMessage(MESSAGE_STATUS_DEFAULT,
+                        self:getName() .. " gained " .. expString .. " for killing " ..
+                        (count > 1 and count .. " " or "") .. monsterName .. (count > 1 and "s" or "") .. ".")
+                end
+            end
+        end
+
+        expTracker[playerId][monsterName].totalExp = 0
+        expTracker[playerId][monsterName].count = 0
+    end, 50)
+
+    return exp
 end
 
 message:register(math.huge)
