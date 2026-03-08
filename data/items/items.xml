@@ -2186,7 +2186,6 @@
 	</item>
 	<item id="2149" article="a" name="small emerald">
 		<attribute key="weight" value="10" />
-		<attribute key="worth" value="1" />
 	</item>
 	<item id="2150" article="a" name="small amethyst">
 		<attribute key="weight" value="10" />

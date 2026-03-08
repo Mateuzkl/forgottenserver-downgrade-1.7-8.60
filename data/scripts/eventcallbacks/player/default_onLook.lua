@@ -1,6 +1,6 @@
 local event = Event()
 event.onLook = function(self, thing, position, distance, description)
-	local description = "You see "
+	description = "You see "
 
 	if thing:isItem() then
 		description = description .. thing:getDescription(distance)
