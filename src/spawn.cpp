@@ -262,7 +262,7 @@ bool Spawn::findPlayer(const Position& pos)
 
 bool Spawn::spawnMonster(uint32_t spawnId, spawnBlock_t sb, bool startup /* = false*/)
 {
-	bool isBlocked = !startup && findPlayer(sb.pos);
+	bool isBlocked = false;
 	size_t monstersCount = sb.mTypes.size(), blockedMonsters = 0;
 
 	const auto spawnFunc = [&](bool roll) {
@@ -386,26 +386,6 @@ void Spawn::checkSpawn()
 		
 		if (OTSYS_TIME() >= sb.lastSpawn + std::max<uint32_t>(static_cast<uint32_t>(MINSPAWN_INTERVAL), sb.interval / static_cast<uint32_t>(std::max<int64_t>(1, ConfigManager::getInteger(ConfigManager::RATE_SPAWN))))) {
 			
-			// If there is a player blocking and no monster in the set ignores the block,
-			// we show POFF and retry on the next cycle (no teleport effect).
-			bool playerBlocking = findPlayer(sb.pos);
-			if (playerBlocking) {
-				bool anyIgnoresBlock = false;
-				for (const auto& pair : sb.mTypes) {
-					if (pair.first->info.isIgnoringSpawnBlock) {
-						anyIgnoresBlock = true;
-						break;
-					}
-				}
-				if (!anyIgnoresBlock) {
-					if (++spawnCount >= static_cast<uint32_t>(1)) {
-						uint32_t effectDuration = ConfigManager::getBoolean(ConfigManager::SPAWN_START_EFFECT_ENABLED) ? static_cast<uint32_t>(ConfigManager::getInteger(ConfigManager::RATE_START_EFFECT)) : 0;
-						scheduleSpawn(spawnId, effectDuration, true);
-						break;
-					}
-				}
-			}
-
 			if (++spawnCount >= static_cast<uint32_t>(1)) {
 				uint32_t effectDuration = ConfigManager::getBoolean(ConfigManager::SPAWN_START_EFFECT_ENABLED) ? static_cast<uint32_t>(ConfigManager::getInteger(ConfigManager::RATE_START_EFFECT)) : 0;
 				scheduleSpawn(spawnId, effectDuration);
@@ -427,26 +407,6 @@ void Spawn::scheduleSpawn(uint32_t spawnId, uint32_t interval, bool blocked)
 		}
 
 		spawnBlock_t& sb = it->second;
-		if (blocked) {
-			bool playerBlocking = findPlayer(sb.pos);
-			if (playerBlocking) {
-				bool anyIgnoresBlock = false;
-				for (const auto& pair : sb.mTypes) {
-					if (pair.first->info.isIgnoringSpawnBlock) {
-						anyIgnoresBlock = true;
-						break;
-					}
-				}
-
-				if (!anyIgnoresBlock) {
-					g_game.addMagicEffect(sb.pos, CONST_ME_POFF);
-					sb.lastSpawn = OTSYS_TIME();
-					sb.effectInitialInterval = 0;
-					return;
-				}
-			}
-		}
-
 		spawnMonster(spawnId, sb);
 		sb.effectInitialInterval = 0;
 		return;
