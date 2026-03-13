@@ -1213,6 +1213,8 @@ SpellGroup_t stringToSpellGroup(std::string_view value)
 		return SPELLGROUP_SUPPORT;
 	} else if (tmpStr == "special" || tmpStr == "4") {
 		return SPELLGROUP_SPECIAL;
+	} else if (tmpStr == "speed" || tmpStr == "5") {
+		return SPELLGROUP_SPEED;
 	}
 
 	return SPELLGROUP_NONE;
