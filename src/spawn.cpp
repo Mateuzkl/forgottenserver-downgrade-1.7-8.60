@@ -210,11 +210,20 @@ void Spawns::startup()
 
 void Spawns::clear()
 {
-	for (Spawn& spawn : spawnList) {
+	// [ASAN FIX]: Przenosimy obecne spawny do tymczasowego kosza.
+	// Pozwalamy zadaniom z Dispatchera odbić się od nich bezpiecznie, 
+	// a po 100ms usuwamy je trwale z pamięci unikając use-after-free.
+	auto* trash = new std::forward_list<Spawn>();
+	trash->swap(spawnList);
+
+	for (Spawn& spawn : *trash) {
 		spawn.clearMonsters();
 		spawn.stopEvent();
 	}
-	spawnList.clear();
+
+	g_scheduler.addEvent(createSchedulerTask(100, [trash]() {
+		delete trash;
+	}));
 
 	loaded = false;
 	started = false;
@@ -262,7 +271,7 @@ bool Spawn::findPlayer(const Position& pos)
 
 bool Spawn::spawnMonster(uint32_t spawnId, spawnBlock_t sb, bool startup /* = false*/)
 {
-	bool isBlocked = false;
+	bool isBlocked = !startup && findPlayer(sb.pos);
 	size_t monstersCount = sb.mTypes.size(), blockedMonsters = 0;
 
 	const auto spawnFunc = [&](bool roll) {
@@ -370,6 +379,11 @@ void Spawn::startup()
 
 void Spawn::checkSpawn()
 {
+	// [ASAN FIX]: Jeśli spawn jest martwy (0xFFFFFFFF), bezpiecznie przerywamy zadanie!
+	if (checkSpawnEvent == 0xFFFFFFFF) {
+		return;
+	}
+
 	checkSpawnEvent = 0;
 
 	cleanup();
@@ -386,6 +400,26 @@ void Spawn::checkSpawn()
 		
 		if (OTSYS_TIME() >= sb.lastSpawn + std::max<uint32_t>(static_cast<uint32_t>(MINSPAWN_INTERVAL), sb.interval / static_cast<uint32_t>(std::max<int64_t>(1, ConfigManager::getInteger(ConfigManager::RATE_SPAWN))))) {
 			
+			// If there is a player blocking and no monster in the set ignores the block,
+			// we show POFF and retry on the next cycle (no teleport effect).
+			bool playerBlocking = findPlayer(sb.pos);
+			if (playerBlocking) {
+				bool anyIgnoresBlock = false;
+				for (const auto& pair : sb.mTypes) {
+					if (pair.first->info.isIgnoringSpawnBlock) {
+						anyIgnoresBlock = true;
+						break;
+					}
+				}
+				if (!anyIgnoresBlock) {
+					if (++spawnCount >= static_cast<uint32_t>(1)) {
+						uint32_t effectDuration = ConfigManager::getBoolean(ConfigManager::SPAWN_START_EFFECT_ENABLED) ? static_cast<uint32_t>(ConfigManager::getInteger(ConfigManager::RATE_START_EFFECT)) : 0;
+						scheduleSpawn(spawnId, effectDuration, true);
+						break;
+					}
+				}
+			}
+
 			if (++spawnCount >= static_cast<uint32_t>(1)) {
 				uint32_t effectDuration = ConfigManager::getBoolean(ConfigManager::SPAWN_START_EFFECT_ENABLED) ? static_cast<uint32_t>(ConfigManager::getInteger(ConfigManager::RATE_START_EFFECT)) : 0;
 				scheduleSpawn(spawnId, effectDuration);
@@ -398,8 +432,14 @@ void Spawn::checkSpawn()
 		checkSpawnEvent = g_scheduler.addEvent(createSchedulerTask(getInterval(), std::bind(&Spawn::checkSpawn, this)));
 	}
 }
+
 void Spawn::scheduleSpawn(uint32_t spawnId, uint32_t interval, bool blocked)
 {
+	// [ASAN FIX]: Zabezpieczenie na wypadek wywołania opóźnionego logowania po skasowaniu.
+	if (checkSpawnEvent == 0xFFFFFFFF) {
+		return;
+	}
+
 	auto it = spawnMap.find(spawnId);
 	if (interval <= 0 || it == spawnMap.end()) {
 		if (it == spawnMap.end()) {
@@ -407,6 +447,26 @@ void Spawn::scheduleSpawn(uint32_t spawnId, uint32_t interval, bool blocked)
 		}
 
 		spawnBlock_t& sb = it->second;
+		if (blocked) {
+			bool playerBlocking = findPlayer(sb.pos);
+			if (playerBlocking) {
+				bool anyIgnoresBlock = false;
+				for (const auto& pair : sb.mTypes) {
+					if (pair.first->info.isIgnoringSpawnBlock) {
+						anyIgnoresBlock = true;
+						break;
+					}
+				}
+
+				if (!anyIgnoresBlock) {
+					g_game.addMagicEffect(sb.pos, CONST_ME_POFF);
+					sb.lastSpawn = OTSYS_TIME();
+					sb.effectInitialInterval = 0;
+					return;
+				}
+			}
+		}
+
 		spawnMonster(spawnId, sb);
 		sb.effectInitialInterval = 0;
 		return;
@@ -505,8 +565,8 @@ void Spawn::removeMonster(Monster* monster)
 
 void Spawn::stopEvent()
 {
-	if (checkSpawnEvent != 0) {
+	if (checkSpawnEvent != 0 && checkSpawnEvent != 0xFFFFFFFF) {
 		g_scheduler.stopEvent(checkSpawnEvent);
-		checkSpawnEvent = 0;
 	}
+	checkSpawnEvent = 0xFFFFFFFF;
 }

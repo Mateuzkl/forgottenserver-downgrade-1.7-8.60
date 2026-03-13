@@ -22,6 +22,7 @@ struct spawnBlock_t
 	uint32_t interval;
 	uint32_t effectInitialInterval; // original respawn interval (ms) used to accelerate effects as spawn approaches
 	Direction direction;
+	uint32_t eventId = 0;
 };
 
 class Spawn

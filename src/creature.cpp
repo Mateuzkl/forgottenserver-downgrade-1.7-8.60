@@ -26,11 +26,15 @@ Creature::~Creature()
 		summon->removeMaster();
 	}
 
-	for (Condition* condition : conditions) {
-		condition->endCondition(this);
-		delete condition;
+	while (!conditions.empty()) {
+		Condition* condition = conditions.front();
+		conditions.pop_front();
+		
+		if (condition) {
+			condition->endCondition(this);
+			delete condition;
+		}
 	}
-	conditions.clear();
 }
 
 bool Creature::canSee(const Position& myPos, const Position& pos, int32_t viewRangeX, int32_t viewRangeY)

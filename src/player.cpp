@@ -51,6 +51,9 @@ Player::Player(ProtocolGame_ptr p) : Creature(), client(std::make_shared<Protoco
 
 Player::~Player()
 {
+	writeItem = nullptr; 
+	editHouse = nullptr;
+
 	for (Item* item : inventory) {
 		if (item) {
 			item->setParent(nullptr);
@@ -58,9 +61,6 @@ Player::~Player()
 			item->decrementReferenceCounter();
 		}
 	}
-
-	setWriteItem(nullptr);
-	setEditHouse(nullptr);
 }
 
 bool Player::setVocation(uint16_t vocId)
@@ -913,6 +913,12 @@ Item* Player::getWriteItem(uint32_t& windowTextId, uint16_t& maxWriteLen)
 }
 void Player::setWriteItem(Item* item, uint16_t maxWriteLen /*= 0*/)
 {
+	if (writeItem == item) {
+		windowTextId++;
+		this->maxWriteLen = maxWriteLen;
+		return;
+	}
+
 	windowTextId++;
 
 	if (writeItem) {

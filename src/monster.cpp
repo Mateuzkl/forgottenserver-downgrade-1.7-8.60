@@ -433,7 +433,7 @@ void Monster::updateTargetList()
 	}
 
 	SpectatorVec spectators;
-	g_game.map.getSpectators(spectators, position, true);
+	g_game.map.getSpectators(spectators, position, false, true);
 	spectators.erase(this);
 	for (Creature* spectator : spectators) {
 		onCreatureFound(spectator);
