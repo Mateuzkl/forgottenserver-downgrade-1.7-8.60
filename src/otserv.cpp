@@ -269,20 +269,10 @@ void mainLoader(ServiceManager* services)
 	g_loaderSignal.notify_all();
 }
 
-[[noreturn]] void badAllocationHandler()
-{
-	// Use functions that only use stack allocation
-	puts("Allocation failed, server out of memory.\nDecrease the size of your map or compile in 64 bits mode.\n");
-	getchar();
-	exit(-1);
-}
-
 } // namespace
 
 void startServer()
 {
-	std::set_new_handler(badAllocationHandler);
-
 	ServiceManager serviceManager;
 
 	g_dispatcher.start();

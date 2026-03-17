@@ -11,6 +11,8 @@
 #include <spdlog/sinks/rotating_file_sink.h>
 #ifdef _WIN32
 #include <io.h>
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
 #define write _write
 #define STDERR_FILENO 2
 #else
