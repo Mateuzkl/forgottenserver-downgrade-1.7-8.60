@@ -1406,11 +1406,6 @@ void Player::onWalk(Direction& dir)
 
 	Creature::onWalk(dir);
 	setNextActionTask(nullptr);
-	// Check if casting while walking is enabled
-	if (!getBoolean(ConfigManager::ALLOW_CASTING_WHILE_WALKING)) {
-		setNextAction(OTSYS_TIME() + getStepDuration(dir));
-	}
-	// If enabled, allow casting spells/runes while walking
 }
 
 void Player::onCreatureMove(Creature* creature, const Tile* newTile, const Position& newPos, const Tile* oldTile,
@@ -3408,11 +3403,12 @@ void Player::doAttacking(uint32_t)
 		const Weapon* weapon = g_weapons->getWeapon(tool);
 		uint32_t delay = getAttackSpeed();
 		bool classicSpeed = getBoolean(ConfigManager::CLASSIC_ATTACK_SPEED);
+		bool allowAutoAttackWithoutExhaustion = getBoolean(ConfigManager::ALLOW_AUTO_ATTACK_WITHOUT_EXHAUSTION);
 
 		if (weapon) {
 			if (!weapon->interruptSwing()) {
 				result = weapon->useWeapon(this, tool, attackedCreature);
-			} else if (!classicSpeed && !canDoAction()) {
+			} else if (!classicSpeed && !allowAutoAttackWithoutExhaustion && !canDoAction()) {
 				delay = getNextActionTime();
 			} else {
 				result = weapon->useWeapon(this, tool, attackedCreature);
@@ -3424,7 +3420,7 @@ void Player::doAttacking(uint32_t)
 		SchedulerTask* task = createSchedulerTask(std::max<uint32_t>(SCHEDULER_MINTICKS, delay),
 		                                          [id = getID()]() { g_game.checkCreatureAttack(id); });
 
-		if (!classicSpeed) {
+		if (!classicSpeed && !allowAutoAttackWithoutExhaustion) {
 			setNextActionTask(task, false);
 		} else {
 			g_scheduler.addEvent(task);
@@ -3439,7 +3435,7 @@ void Player::doAttacking(uint32_t)
 void Player::maintainAttackFlow()
 {
 	if (attackedCreature && !hasCondition(CONDITION_PACIFIED)) {
-		if (!canDoAction()) {
+		if (!canDoAction() && !getBoolean(ConfigManager::ALLOW_AUTO_ATTACK_WITHOUT_EXHAUSTION)) {
 			return;
 		}
 

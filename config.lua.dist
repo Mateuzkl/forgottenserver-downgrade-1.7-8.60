@@ -62,7 +62,6 @@ stairJumpExhaustion = 2000
 experienceByKillingPlayers = false
 pzLockSkullAttacker = false
 allowAutoAttackWithoutExhaustion = true
-allowCastingWhileWalking = true
 
 -- Party Config
 -- required to keep shared experience active.

@@ -2490,6 +2490,7 @@ void Game::playerUseWithCreature(uint32_t playerId, const Position& fromPos, uin
 	g_actions->useItemEx(player, fromPos, creature->getPosition(),
 	                     static_cast<uint8_t>(creature->getParent()->getThingIndex(creature)), item, isHotkey,
 	                     creature);
+	player->maintainAttackFlow();
 }
 
 void Game::playerCloseContainer(uint32_t playerId, uint8_t cid)

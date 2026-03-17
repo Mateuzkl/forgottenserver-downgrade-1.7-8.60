@@ -288,7 +288,6 @@ bool ConfigManager::load()
 	booleans[Boolean::BED_OFFLINE_TRAINING] = getGlobalBoolean(L, "bedOfflineTraining", true);
 	booleans[Boolean::ALLOW_AUTO_ATTACK_WITHOUT_EXHAUSTION] =
 	    getGlobalBoolean(L, "allowAutoAttackWithoutExhaustion", true);
-	booleans[Boolean::ALLOW_CASTING_WHILE_WALKING] = getGlobalBoolean(L, "allowCastingWhileWalking", true);
 	booleans[Boolean::ACCOUNT_MANAGER] = getGlobalBoolean(L, "accountManager", false);
 	booleans[Boolean::NAMELOCK_MANAGER] = getGlobalBoolean(L, "namelockManager", false);
 	booleans[Boolean::START_CHOOSEVOC] = getGlobalBoolean(L, "newPlayerChooseVoc", false);
