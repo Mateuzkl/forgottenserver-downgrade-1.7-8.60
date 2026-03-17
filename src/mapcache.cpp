@@ -105,8 +105,9 @@ void MapCache::flush() {
     double tileHitRate = totalTileRequests > 0 ? 
         (static_cast<double>(tileCacheHits) / totalTileRequests * 100.0) : 0.0;
     
-    itemCache.clear();
-    tileCache.clear();
+    // Force full deallocation of hash table memory by swapping with empty maps
+    decltype(itemCache)().swap(itemCache);
+    decltype(tileCache)().swap(tileCache);
     
     LOG_INFO(fmt::format(">> Map cache flushed: {} unique items, {} unique tiles deduplicated", 
                          itemCount, tileCount));

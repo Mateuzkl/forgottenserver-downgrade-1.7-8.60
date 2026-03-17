@@ -67,6 +67,9 @@ public:
 
 	bool isInRange(const Position& startPos, const Position& testPos, const FindPathParams& fpp) const;
 
+	const Position& getTargetPos() const { return targetPos; }
+
+private:
 	Position targetPos;
 };
 

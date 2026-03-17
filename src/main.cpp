@@ -4,6 +4,9 @@
 #include "otserv.h"
 #include "tools.h"
 
+#include <cstdlib>
+#include <cstdio>
+
 static bool argumentsHandler(const std::vector<std::string_view>& args)
 {
 	for (const auto& arg : args) {
@@ -36,8 +39,17 @@ static bool argumentsHandler(const std::vector<std::string_view>& args)
 	return true;
 }
 
+[[noreturn]] static void badAllocationHandler()
+{
+	puts("Allocation failed, server out of memory.\nDecrease the size of your map or compile in 64 bits mode.");
+	getchar();
+	std::exit(-1);
+}
+
 int main(int argc, const char** argv)
 {
+    std::set_new_handler(badAllocationHandler);
+
     std::vector<std::string_view> args(argv, argv + argc);
 	if (!argumentsHandler(args)) {
 		return 1;

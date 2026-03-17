@@ -3856,10 +3856,16 @@ void Game::checkCreatures(size_t index)
 	while (it != end) {
 		Creature* creature = *it;
 		if (creature->creatureCheck) {
-			if (!creature->isDead()) {
+			if (!creature->isDead() && !creature->isRemoved()) {
 				creature->onThink(EVENT_CREATURE_THINK_INTERVAL);
-				creature->onAttacking(EVENT_CREATURE_THINK_INTERVAL);
-				creature->executeConditions(EVENT_CREATURE_THINK_INTERVAL);
+
+				if (!creature->isDead() && creature->getAttackedCreature()) {
+					creature->onAttacking(EVENT_CREATURE_THINK_INTERVAL);
+				}
+
+				if (!creature->isDead()) {
+					creature->executeConditions(EVENT_CREATURE_THINK_INTERVAL);
+				}
 			}
 			++it;
 		} else {
@@ -4124,11 +4130,14 @@ void Game::combatGetTypeInfo(CombatType_t combatType, Creature* target, TextColo
 
 bool Game::combatChangeHealth(Creature* attacker, Creature* target, CombatDamage& damage)
 {
+	
+	if (!target || target->isDead() || target->isRemoved()) {
+		return false;
+	}
+
 	const Position& targetPos = target->getPosition();
 	if (damage.primary.value > 0) {
-		if (target->isDead()) {
-			return false;
-		}
+
 
 		Player* attackerPlayer;
 		if (attacker) {
@@ -4451,7 +4460,7 @@ bool Game::combatChangeHealth(Creature* attacker, Creature* target, CombatDamage
 				if (rewardBossTracking.find(monsterId) == rewardBossTracking.end()) {
 					rewardBossTracking[monsterId] = RewardBossContributionInfo();
 				}
-				if (attacker->getPlayer()) {
+				if (attacker && attacker->getPlayer()) {
 					uint32_t playerGuid = attacker->getPlayer()->getGUID();
 					rewardBossTracking[monsterId].playerScoreTable[playerGuid].damageDone += realDamage * ConfigManager::getFloat(ConfigManager::REWARD_RATE_DAMAGE_DONE);
 				}

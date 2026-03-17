@@ -13,7 +13,7 @@ class SpectatorVec
 	using ConstIterator = Vec::const_iterator;
 
 public:
-	SpectatorVec() { vec.reserve(32); }
+	SpectatorVec() { vec.reserve(16); }
 
 	void addSpectators(const SpectatorVec& spectators)
 	{

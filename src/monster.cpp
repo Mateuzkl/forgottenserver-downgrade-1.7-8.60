@@ -1344,6 +1344,7 @@ bool Monster::getNextStep(Direction& direction, uint32_t& flags)
 			} else {
 				if (ignoreFieldDamage) {
 					ignoreFieldDamage = false;
+					updateMapCache();
 				}
 				// target dancing
 				if (attackedCreature && attackedCreature == followCreature) {

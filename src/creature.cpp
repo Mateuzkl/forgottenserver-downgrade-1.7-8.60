@@ -868,26 +868,11 @@ bool Creature::setAttackedCreature(Creature* creature)
 
 void Creature::getPathSearchParams(const Creature*, FindPathParams& fpp) const
 {
-	const Monster* monster = getMonster();
-	if (monster && monster->getMaster()) {
-		fpp.fullPathSearch = false;
-		fpp.clearSight = false;
-		fpp.maxSearchDist = 8;
-		fpp.minTargetDist = 1;
-		fpp.maxTargetDist = 2;
-	} else if (monster) {
-		fpp.fullPathSearch = false;
-		fpp.clearSight = true;
-		fpp.maxSearchDist = 10;
-		fpp.minTargetDist = 1;
-		fpp.maxTargetDist = 1;
-	} else {
-		fpp.fullPathSearch = !hasFollowPath;
-		fpp.clearSight = true;
-		fpp.maxSearchDist = 12;
-		fpp.minTargetDist = 1;
-		fpp.maxTargetDist = 1;
-	}
+	fpp.fullPathSearch = !hasFollowPath;
+	fpp.clearSight = true;
+	fpp.maxSearchDist = 12;
+	fpp.minTargetDist = 1;
+	fpp.maxTargetDist = 1;
 }
 
 void Creature::goToFollowCreature()
@@ -1276,6 +1261,10 @@ void Creature::executeConditions(uint32_t interval)
 {
 	ConditionList tempConditions{conditions};
 	for (Condition* condition : tempConditions) {
+				if (isDead() || isRemoved()) {
+			break;
+		}
+
 		auto it = std::find(conditions.begin(), conditions.end(), condition);
 		if (it == conditions.end()) {
 			continue;

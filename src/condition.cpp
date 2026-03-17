@@ -1501,6 +1501,11 @@ bool ConditionDamage::getNextDamage(int32_t& damage)
 
 bool ConditionDamage::doDamage(Creature* creature, int32_t healthChange)
 {
+	
+	if (!creature || creature->isDead() || creature->isRemoved()) {
+		return false;
+	}
+
 	if (creature->isSuppress(getType()) || creature->isImmune(getType())) {
 		return false;
 	}

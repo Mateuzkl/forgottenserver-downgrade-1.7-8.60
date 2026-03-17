@@ -21,7 +21,8 @@ struct FindPathParams;
 struct AStarNode
 {
 	AStarNode* parent;
-	int_fast32_t f;
+	int_fast32_t f;        // f = g_score + h_score, used for heap ordering
+	int_fast32_t g_score;  // actual accumulated cost from start to this node
 	uint16_t x, y;
 };
 
@@ -33,22 +34,30 @@ class AStarNodes
 {
 public:
 	AStarNodes(uint32_t x, uint32_t y);
+	~AStarNodes();
 
-	AStarNode* createOpenNode(AStarNode* parent, uint32_t x, uint32_t y, int_fast32_t f);
+	// non-copyable
+	AStarNodes(const AStarNodes&) = delete;
+	AStarNodes& operator=(const AStarNodes&) = delete;
+
+	AStarNode* createOpenNode(AStarNode* parent, uint32_t x, uint32_t y, int_fast32_t f, int_fast32_t g_score);
 	AStarNode* getBestNode();
-	void closeNode(AStarNode* node);
+	void closeNode(const AStarNode* node);
 	void openNode(AStarNode* node);
 	int_fast32_t getClosedNodes() const;
 	AStarNode* getNodeByPosition(uint32_t x, uint32_t y);
 
-	static int_fast32_t getMapWalkCost(AStarNode* node, const Position& neighborPos);
+	static int_fast32_t getMapWalkCost(const AStarNode* node, const Position& neighborPos);
 	static int_fast32_t getTileWalkCost(const Creature& creature, const Tile* tile);
 
 private:
-	AStarNode nodes[MAX_NODES];
-	bool openNodes[MAX_NODES];
-	std::unordered_map<uint32_t, AStarNode*> nodeTable;
-	size_t curNode;
+	void siftUp(uint16_t pos);
+	uint16_t siftDown(uint16_t pos);
+	void insert(uint32_t key, uint16_t nodeIdx);
+	uint16_t find(uint32_t key) const;
+
+	uint16_t heapSize;
+	uint16_t currentNode;
 	int_fast32_t closedNodes;
 };
 
