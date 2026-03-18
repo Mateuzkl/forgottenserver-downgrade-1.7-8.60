@@ -479,6 +479,7 @@ enum Exhaust_t : uint32_t
 	EXHAUST_OPENCONTAINER = 21,
 	EXHAUST_POTION = 30,
 	EXHAUST_MACHETE = 31,
+	EXHAUST_MOVEITEM = 40,
 };
 
 enum ReloadTypes_t : uint8_t

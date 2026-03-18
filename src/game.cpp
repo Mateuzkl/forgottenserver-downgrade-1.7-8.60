@@ -915,8 +915,14 @@ void Game::playerMoveItemByPlayerID(uint32_t playerId, const Position& fromPos, 
 void Game::playerMoveItem(Player* player, const Position& fromPos, uint16_t spriteId, uint8_t fromStackPos,
                           const Position& toPos, uint8_t count, Item* item, Cylinder* toCylinder)
 {
-	if (!player->canDoAction()) {
-		uint32_t delay = player->getNextActionTime();
+	if (player->hasCondition(CONDITION_EXHAUST_WEAPON, EXHAUST_MOVEITEM)) {
+		uint32_t delay = SCHEDULER_MINTICKS;
+		if (Condition* cond = player->getCondition(CONDITION_EXHAUST_WEAPON, CONDITIONID_DEFAULT, EXHAUST_MOVEITEM)) {
+			int64_t remaining = cond->getEndTime() - OTSYS_TIME();
+			if (remaining > 0) {
+				delay = static_cast<uint32_t>(remaining);
+			}
+		}
 		SchedulerTask* task = createSchedulerTask(delay, ([=, this, playerID = player->getID()]() {
 			playerMoveItemByPlayerID(playerID, fromPos, spriteId, fromStackPos, toPos, count);
 		}));
@@ -1150,7 +1156,11 @@ void Game::playerMoveItem(Player* player, const Position& fromPos, uint16_t spri
 	if (ret != RETURNVALUE_NOERROR) {
 		player->sendCancelMessage(ret);
 	} else {
-		player->setNextAction(OTSYS_TIME() + getInteger(ConfigManager::ACTIONS_DELAY_INTERVAL));
+		// anti-cheat isolado: não contamina canDoAction() / useItem / useItemEx
+		if (Condition* c = Condition::createCondition(CONDITIONID_DEFAULT, CONDITION_EXHAUST_WEAPON,
+		            getInteger(ConfigManager::ACTIONS_DELAY_INTERVAL), 0, false, EXHAUST_MOVEITEM)) {
+			player->addCondition(c);
+		}
 	}
 }
 
