@@ -1156,7 +1156,6 @@ void Game::playerMoveItem(Player* player, const Position& fromPos, uint16_t spri
 	if (ret != RETURNVALUE_NOERROR) {
 		player->sendCancelMessage(ret);
 	} else {
-		// anti-cheat isolado: não contamina canDoAction() / useItem / useItemEx
 		if (Condition* c = Condition::createCondition(CONDITIONID_DEFAULT, CONDITION_EXHAUST_WEAPON,
 		            getInteger(ConfigManager::ACTIONS_DELAY_INTERVAL), 0, false, EXHAUST_MOVEITEM)) {
 			player->addCondition(c);

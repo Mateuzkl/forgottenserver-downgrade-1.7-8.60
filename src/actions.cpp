@@ -580,13 +580,21 @@ bool Actions::useItemEx(Player* player, const Position& fromPos, const Position&
 	                std::find(fastPotionIds.begin(), fastPotionIds.end(), itemId) != fastPotionIds.end();
 
 	// Check exhaust per type
-	if (isPotion && player->hasCondition(CONDITION_EXHAUST_WEAPON, EXHAUST_POTION)) {
-		player->sendCancelMessage(RETURNVALUE_YOUAREEXHAUSTED);
-		g_game.addMagicEffect(player->getPosition(), CONST_ME_POFF);
-		return false;
-	} else if (player->hasCondition(CONDITION_EXHAUST_WEAPON, EXHAUST_USEITEM)) {
-		player->sendCancelMessage(RETURNVALUE_YOUAREEXHAUSTED);
-		return false;
+	if (isPotion) {
+		if (player->hasCondition(CONDITION_EXHAUST_WEAPON, EXHAUST_POTION)) {
+			player->sendCancelMessage(RETURNVALUE_YOUAREEXHAUSTED);
+			g_game.addMagicEffect(player->getPosition(), CONST_ME_POFF);
+			return false;
+		}
+		if (getBoolean(ConfigManager::POTION_CAN_EXHAUST_ITEM) && player->hasCondition(CONDITION_EXHAUST_WEAPON, EXHAUST_USEITEM)) {
+			player->sendCancelMessage(RETURNVALUE_YOUAREEXHAUSTED);
+			return false;
+		}
+	} else {
+		if (player->hasCondition(CONDITION_EXHAUST_WEAPON, EXHAUST_USEITEM)) {
+			player->sendCancelMessage(RETURNVALUE_YOUAREEXHAUSTED);
+			return false;
+		}
 	}
 
 	// Set exhaust conditions
@@ -601,8 +609,8 @@ bool Actions::useItemEx(Player* player, const Position& fromPos, const Position&
 				if (Condition* condition = Condition::createCondition(CONDITIONID_DEFAULT, CONDITION_EXHAUST_WEAPON, itemCooldown, 0, false, EXHAUST_USEITEM)) {
 					player->addCondition(condition);
 				}
+				player->sendUseItemCooldown(itemCooldown);
 			}
-			player->sendUseItemCooldown(potionCooldown);
 		} else {
 			int32_t cooldown = getInteger(ConfigManager::EX_ACTIONS_DELAY_INTERVAL);
 			if (Condition* condition = Condition::createCondition(CONDITIONID_DEFAULT, CONDITION_EXHAUST_WEAPON, cooldown, 0, false, EXHAUST_USEITEM)) {
