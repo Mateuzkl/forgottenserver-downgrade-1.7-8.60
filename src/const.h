@@ -473,6 +473,13 @@ enum PlayerFlags : uint64_t
 	PlayerFlag_CanThrowFar = static_cast<uint64_t>(1) << 40,
 };
 
+enum Exhaust_t : uint32_t
+{
+	EXHAUST_USEITEM = 20,
+	EXHAUST_POTION = 30,
+	EXHAUST_MACHETE = 31,
+};
+
 enum ReloadTypes_t : uint8_t
 {
 	RELOAD_TYPE_ALL,

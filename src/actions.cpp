@@ -515,9 +515,17 @@ bool Actions::useItem(Player* player, const Position& pos, uint8_t index, Item* 
 	}
 	
 	if (!isFastPotion) {
-		int32_t cooldown = getInteger(ConfigManager::ACTIONS_DELAY_INTERVAL);
-		player->setNextAction(OTSYS_TIME() + cooldown);
-		player->sendUseItemCooldown(cooldown);
+		if (player->hasCondition(CONDITION_EXHAUST_WEAPON, EXHAUST_USEITEM)) {
+			player->sendCancelMessage(RETURNVALUE_YOUAREEXHAUSTED);
+			return false;
+		}
+		if (!player->hasFlag(PlayerFlag_HasNoExhaustion)) {
+			int32_t cooldown = getInteger(ConfigManager::ACTIONS_DELAY_INTERVAL);
+			if (Condition* condition = Condition::createCondition(CONDITIONID_DEFAULT, CONDITION_EXHAUST_WEAPON, cooldown, 0, false, EXHAUST_USEITEM)) {
+				player->addCondition(condition);
+			}
+			player->sendUseItemCooldown(cooldown);
+		}
 	}
 
 	if (isHotkey) {
@@ -566,9 +574,55 @@ bool Actions::useItem(Player* player, const Position& pos, uint8_t index, Item* 
 bool Actions::useItemEx(Player* player, const Position& fromPos, const Position& toPos, uint8_t toStackPos, Item* item,
                         bool isHotkey, Creature* creature /* = nullptr*/)
 {
-	int32_t cooldown = getInteger(ConfigManager::EX_ACTIONS_DELAY_INTERVAL);
-	player->setNextAction(OTSYS_TIME() + cooldown);
-	player->sendUseItemCooldown(cooldown);
+	uint16_t itemId = item->getID();
+	const auto& fastPotionIds = ConfigManager::getFastPotionIds();
+	bool isPotion = !fastPotionIds.empty() &&
+	                std::find(fastPotionIds.begin(), fastPotionIds.end(), itemId) != fastPotionIds.end();
+
+	static const uint16_t macheteItems[] = {2420, 2293};
+	bool isMachete = std::find(std::begin(macheteItems), std::end(macheteItems), itemId) != std::end(macheteItems);
+
+	// Check exhaust per type
+	if (isPotion && player->hasCondition(CONDITION_EXHAUST_WEAPON, EXHAUST_POTION)) {
+		player->sendCancelMessage(RETURNVALUE_YOUAREEXHAUSTED);
+		g_game.addMagicEffect(player->getPosition(), CONST_ME_POFF);
+		return false;
+	} else if (isMachete && player->hasCondition(CONDITION_EXHAUST_WEAPON, EXHAUST_MACHETE)) {
+		player->sendCancelMessage(RETURNVALUE_YOUAREEXHAUSTED);
+		return false;
+	} else if (player->hasCondition(CONDITION_EXHAUST_WEAPON, EXHAUST_USEITEM)) {
+		player->sendCancelMessage(RETURNVALUE_YOUAREEXHAUSTED);
+		return false;
+	}
+
+	// Set exhaust conditions
+	if (!player->hasFlag(PlayerFlag_HasNoExhaustion)) {
+		if (isPotion) {
+			int32_t potionCooldown = getInteger(ConfigManager::EXHAUST_POTION_INTERVAL);
+			if (Condition* condition = Condition::createCondition(CONDITIONID_DEFAULT, CONDITION_EXHAUST_WEAPON, potionCooldown, 0, false, EXHAUST_POTION)) {
+				player->addCondition(condition);
+			}
+			if (getBoolean(ConfigManager::POTION_CAN_EXHAUST_ITEM)) {
+				int32_t itemCooldown = getInteger(ConfigManager::EX_ACTIONS_DELAY_INTERVAL);
+				if (Condition* condition = Condition::createCondition(CONDITIONID_DEFAULT, CONDITION_EXHAUST_WEAPON, itemCooldown, 0, false, EXHAUST_USEITEM)) {
+					player->addCondition(condition);
+				}
+			}
+			player->sendUseItemCooldown(potionCooldown);
+		} else if (isMachete) {
+			int32_t cooldown = getInteger(ConfigManager::EX_ACTIONS_DELAY_INTERVAL);
+			if (Condition* condition = Condition::createCondition(CONDITIONID_DEFAULT, CONDITION_EXHAUST_WEAPON, cooldown, 0, false, EXHAUST_MACHETE)) {
+				player->addCondition(condition);
+			}
+			player->sendUseItemCooldown(cooldown);
+		} else {
+			int32_t cooldown = getInteger(ConfigManager::EX_ACTIONS_DELAY_INTERVAL);
+			if (Condition* condition = Condition::createCondition(CONDITIONID_DEFAULT, CONDITION_EXHAUST_WEAPON, cooldown, 0, false, EXHAUST_USEITEM)) {
+				player->addCondition(condition);
+			}
+			player->sendUseItemCooldown(cooldown);
+		}
+	}
 
 	Action* action = getAction(item);
 	if (!action) {

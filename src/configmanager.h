@@ -65,6 +65,7 @@ enum Boolean
 	ADMIN_LOCALHOST_ONLY,
 	ADMIN_REQUIRE_LOGIN,
 	ADMIN_LOGS,
+	POTION_CAN_EXHAUST_ITEM,
 
 	LAST_BOOLEAN /* this must be the last one */
 };
@@ -201,6 +202,7 @@ enum Integer
 
 	AUTOLOOT_MAXITEMS_FREE,
 	AUTOLOOT_MAXITEMS_PREMIUM,
+	EXHAUST_POTION_INTERVAL,
 
 	LAST_INTEGER /* this must be the last one */
 };

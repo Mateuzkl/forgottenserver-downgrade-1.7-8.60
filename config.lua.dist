@@ -113,6 +113,8 @@ onlyInvitedCanMoveHouseItems = true
 -- Item Usage
 timeBetweenActions = 200
 timeBetweenExActions = 1000
+exhaustPotionMiliSeconds = 1500
+exhaustItemAtUsePotion = true
 
 -- Fast Potions Configuration
 fastPotions = true
