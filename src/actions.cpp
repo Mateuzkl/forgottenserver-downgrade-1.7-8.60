@@ -515,13 +515,13 @@ bool Actions::useItem(Player* player, const Position& pos, uint8_t index, Item* 
 	}
 	
 	if (!isFastPotion) {
-		if (player->hasCondition(CONDITION_EXHAUST_WEAPON, EXHAUST_USEITEM)) {
+		if (player->hasCondition(CONDITION_EXHAUST_WEAPON, EXHAUST_OPENCONTAINER)) {
 			player->sendCancelMessage(RETURNVALUE_YOUAREEXHAUSTED);
 			return false;
 		}
 		if (!player->hasFlag(PlayerFlag_HasNoExhaustion)) {
 			int32_t cooldown = getInteger(ConfigManager::ACTIONS_DELAY_INTERVAL);
-			if (Condition* condition = Condition::createCondition(CONDITIONID_DEFAULT, CONDITION_EXHAUST_WEAPON, cooldown, 0, false, EXHAUST_USEITEM)) {
+			if (Condition* condition = Condition::createCondition(CONDITIONID_DEFAULT, CONDITION_EXHAUST_WEAPON, cooldown, 0, false, EXHAUST_OPENCONTAINER)) {
 				player->addCondition(condition);
 			}
 			player->sendUseItemCooldown(cooldown);

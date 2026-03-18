@@ -476,6 +476,7 @@ enum PlayerFlags : uint64_t
 enum Exhaust_t : uint32_t
 {
 	EXHAUST_USEITEM = 20,
+	EXHAUST_OPENCONTAINER = 21,
 	EXHAUST_POTION = 30,
 	EXHAUST_MACHETE = 31,
 };
