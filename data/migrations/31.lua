@@ -1,7 +1,16 @@
 function onUpdateDatabase()
-	print("> Updating database to version 27 (guildhalls, guild banks #2213)")
-	db.query("ALTER TABLE `houses` ADD `type` ENUM('HOUSE', 'GUILDHALL') NOT NULL DEFAULT 'HOUSE' AFTER `id`")
-	db.query("ALTER TABLE `guilds` ADD `balance` bigint(20) UNSIGNED NOT NULL DEFAULT '0'")
+	print("> Updating database to version 32 (guildhalls, guild banks #2213)")
+
+	local result = db.storeQuery("SELECT `COLUMN_NAME` FROM `information_schema`.`COLUMNS` WHERE `TABLE_SCHEMA` = DATABASE() AND `TABLE_NAME` = 'houses' AND `COLUMN_NAME` = 'type'")
+	if not result then
+		db.query("ALTER TABLE `houses` ADD `type` ENUM('HOUSE', 'GUILDHALL') NOT NULL DEFAULT 'HOUSE' AFTER `id`")
+	end
+
+	result = db.storeQuery("SELECT `COLUMN_NAME` FROM `information_schema`.`COLUMNS` WHERE `TABLE_SCHEMA` = DATABASE() AND `TABLE_NAME` = 'guilds' AND `COLUMN_NAME` = 'balance'")
+	if not result then
+		db.query("ALTER TABLE `guilds` ADD `balance` bigint(20) UNSIGNED NOT NULL DEFAULT '0'")
+	end
+
 	db.query([[
 		CREATE TABLE IF NOT EXISTS `guild_transactions` (
 			`id` int(11) NOT NULL AUTO_INCREMENT,
