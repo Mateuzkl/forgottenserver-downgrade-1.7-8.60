@@ -1698,6 +1698,7 @@ void LuaScriptInterface::registerFunctions()
 	registerEnum(ITEM_GOLD_COIN);
 	registerEnum(ITEM_PLATINUM_COIN);
 	registerEnum(ITEM_CRYSTAL_COIN);
+	registerEnum(ITEM_GOLD_NUGGET);
 	registerEnum(ITEM_AMULETOFLOSS);
 	registerEnum(ITEM_PARCEL);
 	registerEnum(ITEM_LABEL);
