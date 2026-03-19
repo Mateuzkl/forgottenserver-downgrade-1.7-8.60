@@ -4870,6 +4870,10 @@ void Player::lootCorpse(Container* container)
 		return;
 	}
 
+	if (!autolootConfig.enabled) {
+		return;
+	}
+
 	std::vector<std::pair<Item*, uint16_t>> toMove;
 
 	AutoLootMap::iterator iter;
@@ -4930,6 +4934,19 @@ void Player::lootCorpse(Container* container)
 		}
 
 		g_game.internalMoveItem(container, backpack->getContainer(), INDEX_WHEREEVER, item, item->getItemCount(), nullptr);
+	}
+
+	if (autolootConfig.goldEnabled) {
+		std::unordered_set<Item*> alreadyQueued(itemsToRemove.begin(), itemsToRemove.end());
+		for (ContainerIterator it = container->iterator(); it.hasNext(); it.advance()) {
+			Item* goldItem = *it;
+			uint64_t worth = static_cast<uint64_t>(goldItem->getWorth());
+			if (worth > 0 && alreadyQueued.find(goldItem) == alreadyQueued.end()) {
+				totalDepositValue += worth;
+				itemsToRemove.push_back(goldItem);
+				alreadyQueued.insert(goldItem);
+			}
+		}
 	}
 
 	if (totalDepositValue > 0) {

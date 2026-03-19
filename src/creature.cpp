@@ -701,7 +701,16 @@ bool Creature::dropCorpse(Creature* lastHitCreature, Creature* mostDamageCreatur
 		}
 
 		if (corpse) {
-			dropLoot(corpse->getContainer(), lastHitCreature);
+			if (Container* corpseContainer = corpse->getContainer()) {
+				dropLoot(corpseContainer, lastHitCreature);
+
+				uint32_t corpseOwnerId = corpse->getCorpseOwner();
+				if (corpseOwnerId != 0) {
+					if (Player* corpseOwner = g_game.getPlayerByID(corpseOwnerId)) {
+						corpseOwner->lootCorpse(corpseContainer);
+					}
+				}
+			}
 		}
 	}
 

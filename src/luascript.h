@@ -482,6 +482,8 @@ private:
 	static int luaPlayerGetAutoLootItemCount(lua_State* L);
 	static int luaPlayerSetAutoLootEnabled(lua_State* L);
 	static int luaPlayerIsAutoLootEnabled(lua_State* L);
+	static int luaPlayerSetAutoLootGold(lua_State* L);
+	static int luaPlayerIsAutoLootGoldEnabled(lua_State* L);
 	static int luaPlayerClearAutoLoot(lua_State* L);
 	static int luaPlayerGetSpectators(lua_State* L);
 	static int luaPlayerSetSpectators(lua_State* L);

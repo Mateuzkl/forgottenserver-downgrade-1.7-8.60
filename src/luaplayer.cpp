@@ -2787,6 +2787,32 @@ int LuaScriptInterface::luaPlayerClearAutoLoot(lua_State* L)
 	return 1;
 }
 
+int LuaScriptInterface::luaPlayerSetAutoLootGold(lua_State* L)
+{
+	// player:setAutoLootGold(enabled)
+	Player* player = Lua::getUserdata<Player>(L, 1);
+	if (player) {
+		bool enabled = Lua::getBoolean(L, 2);
+		player->autolootConfig.goldEnabled = enabled;
+		Lua::pushBoolean(L, true);
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+int LuaScriptInterface::luaPlayerIsAutoLootGoldEnabled(lua_State* L)
+{
+	// player:isAutoLootGoldEnabled()
+	Player* player = Lua::getUserdata<Player>(L, 1);
+	if (player) {
+		Lua::pushBoolean(L, player->autolootConfig.goldEnabled);
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
 int LuaScriptInterface::luaPlayerGetSpectators(lua_State* L)
 {
 	Player* player = Lua::getUserdata<Player>(L, 1);
@@ -3172,6 +3198,8 @@ void LuaScriptInterface::registerPlayer()
 	registerMethod("Player", "getAutoLootItemCount", LuaScriptInterface::luaPlayerGetAutoLootItemCount);
 	registerMethod("Player", "setAutoLootEnabled", LuaScriptInterface::luaPlayerSetAutoLootEnabled);
 	registerMethod("Player", "isAutoLootEnabled", LuaScriptInterface::luaPlayerIsAutoLootEnabled);
+	registerMethod("Player", "setAutoLootGold", LuaScriptInterface::luaPlayerSetAutoLootGold);
+	registerMethod("Player", "isAutoLootGoldEnabled", LuaScriptInterface::luaPlayerIsAutoLootGoldEnabled);
 	registerMethod("Player", "clearAutoLoot", LuaScriptInterface::luaPlayerClearAutoLoot);
 
 	// Token Protection System
