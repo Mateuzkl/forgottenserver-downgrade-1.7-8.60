@@ -46,6 +46,7 @@
 	<talkaction words="!uptime" script="uptime.lua" />
 	<talkaction words="!deathlist" separator=" " script="deathlist.lua" />
 	<talkaction words="!kills" script="kills.lua" />
+	<talkaction words="!removeskull" script="removeskull.lua" />
 	<talkaction words="!online;/online" script="online.lua" />
 	<talkaction words="!serverinfo" script="serverinfo.lua" />
 	<talkaction words="!pos" script="position.lua" />
