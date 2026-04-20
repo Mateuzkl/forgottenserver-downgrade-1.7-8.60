@@ -158,40 +158,40 @@ void GlobalEvents::timer()
 
 void GlobalEvents::think()
 {
-	auto now = OTSYS_TIME();
+    auto now = OTSYS_TIME();
 
-	int64_t nextScheduledTime = std::numeric_limits<int64_t>::max();
-	for (auto& it : thinkMap) {
-		GlobalEvent& globalEvent = it.second;
+    int64_t nextScheduledTime = std::numeric_limits<int64_t>::max();
+    for (auto& it : thinkMap) {
+        GlobalEvent& globalEvent = it.second;
 
-		int64_t nextExecutionTime = globalEvent.getNextExecution() - now;
-		if (nextExecutionTime > 0) {
-			if (nextExecutionTime < nextScheduledTime) {
-				nextScheduledTime = nextExecutionTime;
-			}
-			continue;
-		}
+        int64_t nextExecutionTime = globalEvent.getNextExecution() - now;
+        if (nextExecutionTime > 0) {
+            if (nextExecutionTime < nextScheduledTime) {
+                nextScheduledTime = nextExecutionTime;
+            }
+            continue;
+        }
 
-		if (!globalEvent.executeEvent()) {
-			LOG_ERROR(fmt::format("[Error - GlobalEvents::think] Failed to execute event: {}", globalEvent.getName()));
-		}
+        if (!globalEvent.executeEvent()) {
+            LOG_ERROR(fmt::format("[Error - GlobalEvents::think] Failed to execute event: {}", globalEvent.getName()));
+        }
 
-		nextExecutionTime = globalEvent.getInterval();
-		nextExecutionTime = std::min<int64_t>(nextExecutionTime, nextScheduledTime);
-		nextScheduledTime = nextExecutionTime;
+        int64_t nextEventTime = globalEvent.getInterval();
+        globalEvent.setNextExecution(now + nextEventTime);
 
-		globalEvent.setNextExecution(now + nextExecutionTime);
-	}
+        if (nextEventTime < nextScheduledTime) {
+            nextScheduledTime = nextEventTime;
+        }
+    }
 
-		// FIX: Cancel thinkEventId before scheduling a new one
-		if (thinkEventId != 0) {
-			g_scheduler.stopEvent(thinkEventId);
-			thinkEventId = 0;
-		}
+    if (thinkEventId != 0) {
+        g_scheduler.stopEvent(thinkEventId);
+        thinkEventId = 0;
+    }
 
-	if (nextScheduledTime != std::numeric_limits<int64_t>::max()) {
-		thinkEventId = g_scheduler.addEvent(createSchedulerTask(nextScheduledTime, [this]() { think(); }));
-	}
+    if (nextScheduledTime != std::numeric_limits<int64_t>::max()) {
+        thinkEventId = g_scheduler.addEvent(createSchedulerTask(nextScheduledTime, [this]() { think(); }));
+    }
 }
 
 void GlobalEvents::execute(GlobalEvent_t type) const
