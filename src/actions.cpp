@@ -3,8 +3,6 @@
 
 #include "otpch.h"
 
-#include <algorithm>
-
 #include "actions.h"
 
 #include <sstream>
@@ -504,28 +502,16 @@ static void showUseHotkeyMessage(Player* player, const Item* item, uint32_t coun
 
 bool Actions::useItem(Player* player, const Position& pos, uint8_t index, Item* item, bool isHotkey)
 {
-	bool fastPotions = getBoolean(ConfigManager::FAST_POTIONS_ENABLED);
-	const auto& fastPotionIds = ConfigManager::getFastPotionIds();
-	
-	// Check if item is in fast potion list
-	bool isFastPotion = false;
-	if (fastPotions && !fastPotionIds.empty()) {
-		uint16_t itemId = item->getID();
-		isFastPotion = std::find(fastPotionIds.begin(), fastPotionIds.end(), itemId) != fastPotionIds.end();
+	if (player->hasCondition(CONDITION_EXHAUST_WEAPON, EXHAUST_OPENCONTAINER)) {
+		player->sendCancelMessage(RETURNVALUE_YOUAREEXHAUSTED);
+		return false;
 	}
-	
-	if (!isFastPotion) {
-		if (player->hasCondition(CONDITION_EXHAUST_WEAPON, EXHAUST_OPENCONTAINER)) {
-			player->sendCancelMessage(RETURNVALUE_YOUAREEXHAUSTED);
-			return false;
+	if (!player->hasFlag(PlayerFlag_HasNoExhaustion)) {
+		int32_t cooldown = getInteger(ConfigManager::ACTIONS_DELAY_INTERVAL);
+		if (Condition* condition = Condition::createCondition(CONDITIONID_DEFAULT, CONDITION_EXHAUST_WEAPON, cooldown, 0, false, EXHAUST_OPENCONTAINER)) {
+			player->addCondition(condition);
 		}
-		if (!player->hasFlag(PlayerFlag_HasNoExhaustion)) {
-			int32_t cooldown = getInteger(ConfigManager::ACTIONS_DELAY_INTERVAL);
-			if (Condition* condition = Condition::createCondition(CONDITIONID_DEFAULT, CONDITION_EXHAUST_WEAPON, cooldown, 0, false, EXHAUST_OPENCONTAINER)) {
-				player->addCondition(condition);
-			}
-			player->sendUseItemCooldown(cooldown);
-		}
+		player->sendUseItemCooldown(cooldown);
 	}
 
 	if (isHotkey) {
@@ -574,10 +560,10 @@ bool Actions::useItem(Player* player, const Position& pos, uint8_t index, Item* 
 bool Actions::useItemEx(Player* player, const Position& fromPos, const Position& toPos, uint8_t toStackPos, Item* item,
                         bool isHotkey, Creature* creature /* = nullptr*/)
 {
-	uint16_t itemId = item->getID();
-	const auto& fastPotionIds = ConfigManager::getFastPotionIds();
-	bool isPotion = !fastPotionIds.empty() &&
-	                std::find(fastPotionIds.begin(), fastPotionIds.end(), itemId) != fastPotionIds.end();
+	Action* action = getAction(item);
+	const bool isPotion = action && action->isPotionAction();
+	const bool isRune = g_spells->getRuneSpell(item->getID()) != nullptr;
+	const Exhaust_t exhaustType = isRune ? EXHAUST_RUNE : EXHAUST_USEITEM;
 
 	// Check exhaust per type
 	if (isPotion) {
@@ -591,7 +577,7 @@ bool Actions::useItemEx(Player* player, const Position& fromPos, const Position&
 			return false;
 		}
 	} else {
-		if (player->hasCondition(CONDITION_EXHAUST_WEAPON, EXHAUST_USEITEM)) {
+		if (player->hasCondition(CONDITION_EXHAUST_WEAPON, exhaustType)) {
 			player->sendCancelMessage(RETURNVALUE_YOUAREEXHAUSTED);
 			return false;
 		}
@@ -613,14 +599,13 @@ bool Actions::useItemEx(Player* player, const Position& fromPos, const Position&
 			}
 		} else {
 			int32_t cooldown = getInteger(ConfigManager::EX_ACTIONS_DELAY_INTERVAL);
-			if (Condition* condition = Condition::createCondition(CONDITIONID_DEFAULT, CONDITION_EXHAUST_WEAPON, cooldown, 0, false, EXHAUST_USEITEM)) {
+			if (Condition* condition = Condition::createCondition(CONDITIONID_DEFAULT, CONDITION_EXHAUST_WEAPON, cooldown, 0, false, exhaustType)) {
 				player->addCondition(condition);
 			}
 			player->sendUseItemCooldown(cooldown);
 		}
 	}
 
-	Action* action = getAction(item);
 	if (!action) {
 		player->sendCancelMessage(RETURNVALUE_CANNOTUSETHISOBJECT);
 		return false;
@@ -656,6 +641,10 @@ Action::Action(LuaScriptInterface* interface) :
 
 bool Action::configureEvent(const pugi::xml_node& node)
 {
+	if (pugi::xml_attribute scriptAttr = node.attribute("script")) {
+		potionAction = caseInsensitiveEqual(scriptAttr.as_string(), "other/potions.lua");
+	}
+
 	pugi::xml_attribute allowFarUseAttr = node.attribute("allowfaruse");
 	if (allowFarUseAttr) {
 		allowFarUse = allowFarUseAttr.as_bool();

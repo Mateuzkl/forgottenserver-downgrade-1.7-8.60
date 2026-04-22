@@ -116,10 +116,6 @@ timeBetweenExActions = 1000
 exhaustPotionMiliSeconds = 1500
 exhaustItemAtUsePotion = true
 
--- Fast Potions Configuration
-fastPotions = true
-fastPotionIds = { 26031, 26030, 8473, 7591, 8472, 7588, 26029, 7590, 7589, 7620, 7618, 8704, 8474 }
-
 -- Token Protection Exceptions
 -- Items that can be moved even when token protection is enabled
 tokenProtectionExceptions = { 2160, 2152, 2148, 3976, 2666, 2667, 2668, 2669, 2670, 2671, 2672, 2673, 2674, 2675, 2676, 2677, 2678, 2679, 2680, 2681, 2682, 2683, 2684, 2685, 2686, 2687, 2688, 2689, 2690, 2691, 2692, 2693, 2694, 2695, 2696, 2783, 2784, 2785, 2786, 2787, 2788, 2789, 2790, 2791, 2792, 2727, 2728, 2729, 2730, 2731, 2732, 2733, 2734, 2735, 2736, 2737, 2738, 2739, 2740, 2741, 2742, 2743, 2744 }

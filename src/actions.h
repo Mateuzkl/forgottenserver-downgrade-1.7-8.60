@@ -33,6 +33,7 @@ public:
 
 	bool getCheckFloor() const { return checkFloor; }
 	void setCheckFloor(bool v) { checkFloor = v; }
+	bool isPotionAction() const { return potionAction; }
 
 	auto stealItemIdRange()
 	{
@@ -75,6 +76,7 @@ private:
 	bool allowFarUse = false;
 	bool checkFloor = true;
 	bool checkLineOfSight = true;
+	bool potionAction = false;
 	std::vector<uint16_t> ids;
 	std::vector<uint16_t> uids;
 	std::vector<uint16_t> aids;
